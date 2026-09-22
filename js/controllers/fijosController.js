@@ -55,36 +55,6 @@ CDG.Controllers = CDG.Controllers || {};
     });
   }
 
-  function openRebajoModal(existing) {
-    const isEdit = !!existing;
-    const usuarios = M.state.config.usuarios;
-    const it = existing || { id: null, persona: usuarios[0] || "", descripcion: "", monto: "" };
-    U.openModal(`
-      <h3>${isEdit ? "Editar" : "Nuevo"} rebajo ($)</h3>
-      <div class="field"><label>Descripción</label><input type="text" id="rDesc" value="${U.escapeHtml(it.descripcion)}" placeholder="Ej. Carro"></div>
-      <div class="field-row">
-        <div class="field"><label>Aplica al ingreso de</label>
-          <select id="rPersona">${usuarios.map(p => `<option ${p === it.persona ? "selected" : ""}>${U.escapeHtml(p)}</option>`).join("")}</select>
-        </div>
-        <div class="field"><label>Monto ($)</label><input type="number" step="0.01" id="rMonto" value="${it.monto}"></div>
-      </div>
-      <div class="modal-actions">
-        <button id="rCancel">Cancelar</button>
-        <button class="primary" id="rSave">Guardar</button>
-      </div>
-    `, (root) => {
-      root.querySelector("#rCancel").onclick = U.closeModal;
-      root.querySelector("#rSave").onclick = () => {
-        const monto = parseFloat(root.querySelector("#rMonto").value);
-        if (isNaN(monto)) { U.toast("Ingresa un monto válido"); return; }
-        const rec = { id: it.id || U.uid(), persona: root.querySelector("#rPersona").value, descripcion: root.querySelector("#rDesc").value.trim(), monto, moneda: "USD" };
-        if (isEdit) M.state.rebajos[M.state.rebajos.findIndex(x => x.id === it.id)] = rec;
-        else M.state.rebajos.push(rec);
-        M.save(); U.closeModal(); U.toast("Guardado"); CDG.App.refreshAll();
-      };
-    });
-  }
-
   /* ---- ingreso extra (one-off, scoped to the period being viewed) ---- */
   function openExtraModal(existing) {
     const isEdit = !!existing;
@@ -229,49 +199,13 @@ CDG.Controllers = CDG.Controllers || {};
     });
   }
 
-  function renderRebajos() {
-    const wrap = document.getElementById("rebajosTableWrap");
-    if (M.state.rebajos.length === 0) {
-      wrap.innerHTML = `<div class="empty-hint">Sin rebajos registrados.</div>`;
-      return;
-    }
-    let total = 0;
-    const rows = M.state.rebajos.map(it => {
-      total += it.monto;
-      return `<tr>
-        <td data-label="Descripción">${U.escapeHtml(it.descripcion) || "—"}</td>
-        <td data-label="Persona">${U.escapeHtml(it.persona)}</td>
-        <td class="num" data-label="Monto">${U.fmtUSD(it.monto)}</td>
-        <td class="row-actions">
-          <button class="icon ghost" data-edit-rebajo="${it.id}">✏️</button>
-          <button class="icon ghost danger" data-del-rebajo="${it.id}">🗑️</button>
-        </td>
-      </tr>`;
-    }).join("");
-    wrap.innerHTML = `<table class="stack-mobile">
-      <thead><tr><th>Descripción</th><th>Persona</th><th class="num">Monto</th><th></th></tr></thead>
-      <tbody>${rows}<tr class="total-row"><td colspan="2">Total rebajos</td><td class="num">${U.fmtUSD(total)}</td><td></td></tr></tbody>
-    </table>`;
-    wrap.querySelectorAll("[data-edit-rebajo]").forEach(btn => {
-      btn.onclick = () => openRebajoModal(M.state.rebajos.find(x => x.id === btn.dataset.editRebajo));
-    });
-    wrap.querySelectorAll("[data-del-rebajo]").forEach(btn => {
-      btn.onclick = () => U.confirmDelete("¿Eliminar este rebajo?", () => {
-        M.state.rebajos = M.state.rebajos.filter(x => x.id !== btn.dataset.delRebajo);
-        M.save(); CDG.App.refreshAll();
-      });
-    });
-  }
-
   function render() {
     renderExtra();
     renderPersonGrid("fijosIngresoGrid", "ingreso", "Ingreso fijo");
-    renderRebajos();
     renderPersonGrid("fijosGastoGrid", "gasto", "Gastos fijos");
   }
 
   function init() {
-    document.getElementById("addRebajoBtn").addEventListener("click", () => openRebajoModal(null));
     document.getElementById("addExtraBtn").addEventListener("click", () => openExtraModal(null));
   }
 

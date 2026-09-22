@@ -25,10 +25,10 @@ CDG.Controllers.Reportes = (function () {
     const totalAhorro = filas.reduce((s, p) => s + p.ahorro, 0);
 
     document.getElementById("reportesCards").innerHTML = `
-      <div class="card"><div class="label">Ingresos</div><div class="value pos">${U.fmtCRC(totalIngreso)}</div></div>
-      <div class="card"><div class="label">Gastos</div><div class="value neg">${U.fmtCRC(totalGasto)}</div></div>
-      <div class="card"><div class="label">Balance</div><div class="value ${totalBalance >= 0 ? "pos" : "neg"}">${U.fmtCRC(totalBalance)}</div></div>
-      <div class="card"><div class="label">Ahorro</div><div class="value">${U.fmtCRC(totalAhorro)}</div></div>
+      <div class="card"><div class="label">Ingresos</div><div class="value pos">${U.fmtCRC(totalIngreso)}</div><div class="sub">Ingreso fijo + extra de los periodos filtrados</div></div>
+      <div class="card"><div class="label">Gastos</div><div class="value neg">${U.fmtCRC(totalGasto)}</div><div class="sub">Gastos fijos + gastos variables de los periodos filtrados</div></div>
+      <div class="card"><div class="label">Balance</div><div class="value ${totalBalance >= 0 ? "pos" : "neg"}">${U.fmtCRC(totalBalance)}</div><div class="sub">Ingresos − gastos de los periodos filtrados</div></div>
+      <div class="card"><div class="label">Ahorro</div><div class="value">${U.fmtCRC(totalAhorro)}</div><div class="sub">Suma del ahorro de los periodos filtrados</div></div>
     `;
 
     const wrap = document.getElementById("reportesTableWrap");

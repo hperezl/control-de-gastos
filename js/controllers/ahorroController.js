@@ -32,14 +32,14 @@ CDG.Controllers = CDG.Controllers || {};
         return `<tr>
           <td data-label="Persona">${U.escapeHtml(persona)}</td>
           <td class="num" data-label="Ingreso (fijo+extra)">${U.fmtCRC(L.ingresoFijo + L.extra)}</td>
-          <td class="num" data-label="Rebajos+Gastos fijos">${U.fmtCRC(L.rebajos + L.gastoFijo)}</td>
-          <td class="num" data-label="Libre">${U.fmtCRC(L.libre)}</td>
+          <td class="num" data-label="Gastos fijos">${U.fmtCRC(L.gastoFijo)}</td>
+          <td class="num" data-label="Neto">${U.fmtCRC(L.libre)}</td>
           <td class="num" data-label="Gastos variables">${U.fmtCRC(gastoVar)}</td>
           <td class="num" data-label="Ahorro">${U.fmtCRC(ahorro)}</td>
         </tr>`;
       }).join("");
       detalleWrap.innerHTML = `<table class="stack-mobile">
-        <thead><tr><th>Persona</th><th class="num">Ingreso (fijo+extra)</th><th class="num">Rebajos+Gastos fijos</th><th class="num">Libre</th><th class="num">Gastos variables</th><th class="num">Ahorro</th></tr></thead>
+        <thead><tr><th>Persona</th><th class="num">Ingreso (fijo+extra)</th><th class="num">Gastos fijos</th><th class="num">Neto</th><th class="num">Gastos variables</th><th class="num">Ahorro</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
     }

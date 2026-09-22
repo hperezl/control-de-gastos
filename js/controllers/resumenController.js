@@ -5,20 +5,67 @@ CDG.Controllers = CDG.Controllers || {};
   const U = CDG.Utils;
   const M = CDG.Model;
 
+  /* Muestra el monto en la(s) moneda(s) en que realmente se registró, no solo
+     el total convertido a colones. Si hay de las dos monedas, devuelve dos
+     tarjetas (una por moneda); si es una sola, una tarjeta (con conversión
+     a colones abajo, en letra pequeña, cuando es en dólares). */
+  function montoCardsPorMoneda(label, sums, totalCRC) {
+    const hasUSD = sums.USD > 0;
+    const hasCRC = sums.CRC > 0;
+    if (hasUSD && hasCRC) {
+      const usdEnCRC = M.toColones(sums.USD, "USD");
+      return `
+        <div class="card"><div class="label">${label} ($)</div><div class="value">${U.fmtUSD(sums.USD)}</div><div class="sub">≈ ${U.fmtCRC(usdEnCRC)}</div></div>
+        <div class="card"><div class="label">${label} (₡)</div><div class="value">${U.fmtCRC(sums.CRC)}</div></div>
+      `;
+    }
+    if (hasUSD) {
+      return `<div class="card"><div class="label">${label}</div><div class="value">${U.fmtUSD(sums.USD)}</div><div class="sub">≈ ${U.fmtCRC(totalCRC)}</div></div>`;
+    }
+    return `<div class="card"><div class="label">${label}</div><div class="value">${U.fmtCRC(totalCRC)}</div></div>`;
+  }
+
+  /* Igual que arriba, pero para valores que pueden ser negativos (Neto/Libre):
+     colorea cada tarjeta según su propio signo y, cuando no hay mezcla de
+     monedas, muestra la fórmula como sub-texto en vez de la conversión. */
+  function netoCardsPorMoneda(label, sums, totalCRC, formula) {
+    const hasUSD = Math.abs(sums.USD) > 0.005;
+    const hasCRC = Math.abs(sums.CRC) > 0.005;
+    const signo = (v) => (v >= 0 ? "pos" : "neg");
+    if (hasUSD && hasCRC) {
+      const usdEnCRC = M.toColones(sums.USD, "USD");
+      return `
+        <div class="card"><div class="label">${label} ($)</div><div class="value ${signo(sums.USD)}">${U.fmtUSD(sums.USD)}</div><div class="sub">≈ ${U.fmtCRC(usdEnCRC)}</div></div>
+        <div class="card"><div class="label">${label} (₡)</div><div class="value ${signo(sums.CRC)}">${U.fmtCRC(sums.CRC)}</div><div class="sub">${formula}</div></div>
+      `;
+    }
+    if (hasUSD) {
+      return `<div class="card"><div class="label">${label}</div><div class="value ${signo(sums.USD)}">${U.fmtUSD(sums.USD)}</div><div class="sub">≈ ${U.fmtCRC(totalCRC)}</div></div>`;
+    }
+    return `<div class="card"><div class="label">${label}</div><div class="value ${signo(totalCRC)}">${U.fmtCRC(totalCRC)}</div><div class="sub">${formula}</div></div>`;
+  }
+
   function personaResumenHtml(persona, period) {
     const L = M.librePersona(persona, period);
     const gastoVar = M.gastosVariablesPersona(persona, period);
     const libreReal = L.libre - gastoVar;
     const Q = M.desgloseQuincenas(persona, period);
+    const ingresoFijoSums = M.ingresoFijoPorMoneda(persona, period);
+    const extraSums = M.ingresoExtraPorMoneda(persona, period);
+    const gastoFijoSums = M.gastoFijoPorMoneda(persona);
+    const gastoVarSums = M.gastoVariablePorMoneda(persona, period);
+    const netoSums = M.combinarPorMoneda([[ingresoFijoSums, 1], [extraSums, 1], [gastoFijoSums, -1]]);
+    const libreSums = M.combinarPorMoneda([[netoSums, 1], [gastoVarSums, -1]]);
+    const mostrarGastoVarDolar = ingresoFijoSums.USD > 0 && gastoVarSums.USD > 0;
     return `
       <div class="cards" style="margin-bottom:0">
-        <div class="card"><div class="label">Ingreso fijo</div><div class="value">${U.fmtCRC(L.ingresoFijo)}</div></div>
-        ${L.extra > 0 ? `<div class="card"><div class="label">Ingreso extra</div><div class="value">${U.fmtCRC(L.extra)}</div></div>` : ""}
-        ${L.rebajos > 0 ? `<div class="card"><div class="label">Rebajos</div><div class="value neg">${U.fmtCRC(L.rebajos)}</div></div>` : ""}
-        <div class="card"><div class="label">Gastos fijos</div><div class="value">${U.fmtCRC(L.gastoFijo)}</div></div>
-        <div class="card"><div class="label">Neto</div><div class="value ${L.libre >= 0 ? "pos" : "neg"}">${U.fmtCRC(L.libre)}</div><div class="sub">Ingreso − rebajos − gastos fijos</div></div>
-        <div class="card"><div class="label">Gastos variables</div><div class="value">${U.fmtCRC(gastoVar)}</div></div>
-        <div class="card"><div class="label">Libre</div><div class="value ${libreReal >= 0 ? "pos" : "neg"}">${U.fmtCRC(libreReal)}</div><div class="sub">Neto − gastos variables</div></div>
+        ${montoCardsPorMoneda("Ingreso fijo", ingresoFijoSums, L.ingresoFijo)}
+        ${L.extra > 0 ? montoCardsPorMoneda("Ingreso extra", extraSums, L.extra) : ""}
+        ${montoCardsPorMoneda("Gastos fijos", gastoFijoSums, L.gastoFijo)}
+        ${netoCardsPorMoneda("Neto", netoSums, L.libre, "Ingreso − gastos fijos")}
+        <div class="card"><div class="label">Gastos variables</div><div class="value">${U.fmtCRC(gastoVarSums.CRC)}</div></div>
+        ${mostrarGastoVarDolar ? `<div class="card"><div class="label">Gastos variables ($)</div><div class="value">${U.fmtUSD(gastoVarSums.USD)}</div><div class="sub">≈ ${U.fmtCRC(M.toColones(gastoVarSums.USD, "USD"))}</div></div>` : ""}
+        ${netoCardsPorMoneda("Libre", libreSums, libreReal, "Neto − gastos variables")}
       </div>
       <div class="quincena-row">
         ${quincenaCardHtml("Quincena 1", "día 1–15", Q.q1)}
@@ -27,13 +74,38 @@ CDG.Controllers = CDG.Controllers || {};
     `;
   }
 
+  /* Línea de la tarjeta de quincena, consciente de moneda: si el monto está
+     100% en una moneda, una línea (con conversión a ₡ debajo en chico si es
+     en $); si hay de las dos, dos líneas — una por moneda. */
+  function quincenaLineaPorMoneda(label, sums, totalCRC, opts) {
+    opts = opts || {};
+    const rowClass = opts.total ? "quincena-line total" : "quincena-line";
+    const color = (v) => (opts.signed ? (v >= 0 ? "pos" : "neg") : "");
+    const hasUSD = Math.abs(sums.USD) > 0.005;
+    const hasCRC = Math.abs(sums.CRC) > 0.005;
+    const valueSpan = (texto, sub, colorClass) =>
+      `<span class="${colorClass}">${texto}${sub ? `<div class="hint small" style="margin:0; text-align:right">${sub}</div>` : ""}</span>`;
+
+    if (hasUSD && hasCRC) {
+      const usdEnCRC = M.toColones(sums.USD, "USD");
+      return `
+        <div class="${rowClass}"><span>${label} ($)</span>${valueSpan(U.fmtUSD(sums.USD), `≈ ${U.fmtCRC(usdEnCRC)}`, color(sums.USD))}</div>
+        <div class="${rowClass}"><span>${label} (₡)</span>${valueSpan(U.fmtCRC(sums.CRC), null, color(sums.CRC))}</div>
+      `;
+    }
+    if (hasUSD) {
+      return `<div class="${rowClass}"><span>${label}</span>${valueSpan(U.fmtUSD(sums.USD), `≈ ${U.fmtCRC(totalCRC)}`, color(sums.USD))}</div>`;
+    }
+    return `<div class="${rowClass}"><span>${label}</span>${valueSpan(U.fmtCRC(totalCRC), null, color(totalCRC))}</div>`;
+  }
+
   function quincenaCardHtml(titulo, sub, q) {
     return `
       <div class="quincena-card">
         <div class="quincena-title">${titulo} <span class="hint small" style="margin:0">(${sub})</span></div>
-        <div class="quincena-line"><span>Ingreso</span><span>${U.fmtCRC(q.ingreso)}</span></div>
-        <div class="quincena-line"><span>Gastos fijos</span><span>${U.fmtCRC(q.gasto)}</span></div>
-        <div class="quincena-line total"><span>Aporte</span><span class="${q.aporte >= 0 ? "pos" : "neg"}">${U.fmtCRC(q.aporte)}</span></div>
+        ${quincenaLineaPorMoneda("Ingreso", q.ingresoSums, q.ingreso)}
+        ${quincenaLineaPorMoneda("Gastos fijos", q.gastoSums, q.gasto)}
+        ${quincenaLineaPorMoneda("Aporte", q.aporteSums, q.aporte, { total: true, signed: true })}
       </div>
     `;
   }
@@ -49,10 +121,10 @@ CDG.Controllers = CDG.Controllers || {};
     const ahorroAcumulado = M.historicoAhorro().total;
 
     document.getElementById("resumenCards").innerHTML = `
-      <div class="card"><div class="label">Ingreso neto del periodo</div><div class="value pos">${U.fmtCRC(ingresoNetoTotal)}</div><div class="sub">Ingreso fijo + extra − rebajos − gastos fijos</div></div>
+      <div class="card"><div class="label">Ingreso neto del periodo</div><div class="value pos">${U.fmtCRC(ingresoNetoTotal)}</div><div class="sub">Ingreso fijo + extra − gastos fijos</div></div>
       <div class="card"><div class="label">Gastos variables del periodo</div><div class="value neg">${U.fmtCRC(gastoTotal)}</div></div>
       <div class="card"><div class="label">Balance / Libre del periodo</div><div class="value ${balance >= 0 ? "pos" : "neg"}">${U.fmtCRC(balance)}</div><div class="sub">Ingreso neto − gastos variables</div></div>
-      <div class="card"><div class="label">Ahorro acumulado</div><div class="value">${U.fmtCRC(ahorroAcumulado)}</div></div>
+      <div class="card"><div class="label">Ahorro acumulado</div><div class="value">${U.fmtCRC(ahorroAcumulado)}</div><div class="sub">Suma del ahorro de todos los periodos registrados</div></div>
     `;
 
     const personasWrap = document.getElementById("resumenPersonasWrap");

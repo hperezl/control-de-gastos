@@ -198,7 +198,7 @@ nav.tabs button.active { background: var(--accent); color: var(--accent-ink); }
   background: var(--page); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
 }
 .quincena-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
-.quincena-line { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; color: var(--text-secondary); }
+.quincena-line { display: flex; justify-content: space-between; align-items: flex-start; font-size: 13px; padding: 3px 0; color: var(--text-secondary); text-align: right; }
 .quincena-line.total { border-top: 1px solid var(--gridline); margin-top: 4px; padding-top: 6px; font-weight: 700; color: var(--text-primary); }
 .quincena-line.total span:first-child { color: var(--text-primary); }
 

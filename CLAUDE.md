@@ -69,6 +69,15 @@ recarga en el navegador del usuario (no confiar en que refresque solo).
   viendo), filtrable por uno específico o "Todos". Usa `M.historicoReportes()` /
   `M.periodosConDatos()` (el mismo generador de periodos que ya usaba `historicoAhorro`,
   refactorizado para reusarse). No depende del navegador ◀ periodo ▶ del header.
+- **Regla no escrita pero seguida hasta ahora: los cambios de esquema son aditivos, nunca
+  destructivos.** Ningún cambio de código borra o sobrescribe datos existentes del
+  usuario — campos nuevos (ej. `dia` en fijos) se agregan junto a los viejos (`periodo`),
+  nunca los reemplazan, y `resolveDia()` es el patrón a seguir: leer el campo nuevo, si no
+  existe usar el viejo como respaldo. `M.resetAll()` solo se dispara con una confirmación
+  explícita del usuario en la UI (botón "Borrar todos los datos" en Configuración) — nunca
+  como parte de una migración o actualización de código. Mantener esto así en cambios
+  futuros: los usuarios ya tienen datos reales en producción (ver conversación del
+  2026-09-22, "no le elimina datos" / "que otro usuario se pueda registrar...").
 
 ## Nube (Firebase) — opcional, con fallback local
 
@@ -149,11 +158,12 @@ open http://localhost:8765/index.html
   regla exacta en la sección "Nube" arriba). Dominio `hperezl.github.io` ya autorizado en
   Authentication → Settings → Authorized domains.
 
+
 <!-- cloude-code-toolbox:mcp-skills-awareness-begin -->
 
 ### MCP & Skills awareness (Cloude Code ToolBox)
 
-_Last synced: 2026-09-21T20:48:31.505Z._
+_Last synced: 2026-09-22T18:04:53.750Z._
 
 - **Full report:** `.claude/cloude-code-toolbox-mcp-skills-awareness.md` in this workspace (auto-overwritten on each scan). Use it as ground truth for configured servers and skill folders.
 - **MCP:** For **live tools** in Claude Code, enable the matching server via `/mcp`. Servers are configured in `~/.claude.json` (user) and `.mcp.json` (project).

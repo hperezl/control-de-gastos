@@ -10,7 +10,7 @@ CDG.Model = (function () {
 
   const CATEGORIAS_GASTO = [
     "Farmacia", "Veterinaria", "Cuota del préstamo", "Supermercado", "Estudio",
-    "Familia", "Soda", "Salidas", "Gasolina", "Carro", "Otro"
+    "Familia materna", "Familia paterna", "Soda", "Salidas", "Gasolina", "Carro", "Otro"
   ];
 
   function defaultConfig() {
@@ -235,12 +235,35 @@ CDG.Model = (function () {
   function librePersona(persona, period) {
     const ingresoFijo = ingresosFijosActivos(period, persona).reduce((s, x) => s + toColones(x.monto, x.moneda), 0);
     const extra = state.ingresosExtra.filter(x => x.persona === persona && inPeriod(x.fecha, period)).reduce((s, x) => s + toColones(x.monto, x.moneda), 0);
-    const rebajos = state.rebajos.filter(x => x.persona === persona).reduce((s, x) => s + toColones(x.monto, x.moneda), 0);
     const gastoFijo = state.gastosFijos.filter(x => x.persona === persona).reduce((s, x) => s + toColones(x.monto, x.moneda), 0);
-    return { ingresoFijo, extra, rebajos, gastoFijo, libre: ingresoFijo + extra - rebajos - gastoFijo };
+    return { ingresoFijo, extra, gastoFijo, libre: ingresoFijo + extra - gastoFijo };
   }
   function gastosVariablesPersona(persona, period) {
     return state.movimientos.filter(m => m.persona === persona && inPeriod(m.fecha, period)).reduce((s, m) => s + toColones(m.monto, m.moneda), 0);
+  }
+  /* Desglose por moneda (sin convertir) — para mostrar "$X ≈ ₡Y" cuando el
+     ingreso de una persona está en dólares, en vez de solo el total en colones. */
+  function sumaPorMoneda(items) {
+    const sums = { USD: 0, CRC: 0 };
+    items.forEach(x => { sums[x.moneda] = (sums[x.moneda] || 0) + x.monto; });
+    return sums;
+  }
+  function ingresoFijoPorMoneda(persona, period) { return sumaPorMoneda(ingresosFijosActivos(period, persona)); }
+  function ingresoExtraPorMoneda(persona, period) {
+    return sumaPorMoneda(state.ingresosExtra.filter(x => x.persona === persona && inPeriod(x.fecha, period)));
+  }
+  function gastoFijoPorMoneda(persona) { return sumaPorMoneda(state.gastosFijos.filter(x => x.persona === persona)); }
+  function gastoVariablePorMoneda(persona, period) {
+    return sumaPorMoneda(state.movimientos.filter(m => m.persona === persona && inPeriod(m.fecha, period)));
+  }
+  /* Combina desgloses por moneda sin convertir (ej. Neto.USD = ingreso.USD −
+     gastoFijo.USD), para poder mostrar "Neto"/"Libre" en su moneda de origen
+     cuando ingreso y gasto de una persona están en la misma moneda. */
+  function combinarPorMoneda(terminos) {
+    return terminos.reduce((acc, [sums, signo]) => ({
+      USD: acc.USD + sums.USD * signo,
+      CRC: acc.CRC + sums.CRC * signo
+    }), { USD: 0, CRC: 0 });
   }
   function ahorroPersona(persona, period) {
     return librePersona(persona, period).libre - gastosVariablesPersona(persona, period);
@@ -280,11 +303,15 @@ CDG.Model = (function () {
   }
   function historicoReportes() {
     return periodosConDatos().map(period => {
-      const gastoTotal = state.movimientos.filter(m => inPeriod(m.fecha, period)).reduce((s, m) => s + toColones(m.monto, m.moneda), 0);
-      const ingresoTotal = state.config.usuarios.reduce((s, p) => {
+      const gastoVariable = state.movimientos.filter(m => inPeriod(m.fecha, period)).reduce((s, m) => s + toColones(m.monto, m.moneda), 0);
+      let ingresoTotal = 0;
+      let gastoFijoTotal = 0;
+      state.config.usuarios.forEach(p => {
         const L = librePersona(p, period);
-        return s + L.ingresoFijo + L.extra;
-      }, 0);
+        ingresoTotal += L.ingresoFijo + L.extra;
+        gastoFijoTotal += L.gastoFijo;
+      });
+      const gastoTotal = gastoFijoTotal + gastoVariable;
       return { key: period.key, label: periodLabel(period), ingreso: ingresoTotal, gasto: gastoTotal, balance: ingresoTotal - gastoTotal, ahorro: ahorroTotalPeriodo(period) };
     });
   }
@@ -301,21 +328,33 @@ CDG.Model = (function () {
   function quincenaDeDia(dia) { return dia != null && dia <= 15 ? 1 : 2; }
 
   function desgloseQuincenas(persona, period) {
-    const q = { 1: { ingreso: 0, gasto: 0 }, 2: { ingreso: 0, gasto: 0 } };
+    const q = {
+      1: { ingreso: { USD: 0, CRC: 0 }, gasto: { USD: 0, CRC: 0 } },
+      2: { ingreso: { USD: 0, CRC: 0 }, gasto: { USD: 0, CRC: 0 } }
+    };
     ingresosFijosActivos(period, persona).forEach(x => {
-      q[quincenaDeDia(resolveDia(x))].ingreso += toColones(x.monto, x.moneda);
+      q[quincenaDeDia(resolveDia(x))].ingreso[x.moneda] += x.monto;
     });
     state.ingresosExtra.filter(x => x.persona === persona && inPeriod(x.fecha, period)).forEach(x => {
       const dia = new Date(x.fecha + "T00:00:00").getDate();
-      q[quincenaDeDia(dia)].ingreso += toColones(x.monto, x.moneda);
+      q[quincenaDeDia(dia)].ingreso[x.moneda] += x.monto;
     });
     state.gastosFijos.filter(x => x.persona === persona).forEach(x => {
-      q[quincenaDeDia(resolveDia(x))].gasto += toColones(x.monto, x.moneda);
+      q[quincenaDeDia(resolveDia(x))].gasto[x.moneda] += x.monto;
     });
-    return {
-      q1: { ingreso: q[1].ingreso, gasto: q[1].gasto, aporte: q[1].ingreso - q[1].gasto },
-      q2: { ingreso: q[2].ingreso, gasto: q[2].gasto, aporte: q[2].ingreso - q[2].gasto }
-    };
+    function armar(qx) {
+      const ingresoCRC = toColones(qx.ingreso.USD, "USD") + qx.ingreso.CRC;
+      const gastoCRC = toColones(qx.gasto.USD, "USD") + qx.gasto.CRC;
+      return {
+        ingresoSums: qx.ingreso,
+        gastoSums: qx.gasto,
+        aporteSums: { USD: qx.ingreso.USD - qx.gasto.USD, CRC: qx.ingreso.CRC - qx.gasto.CRC },
+        ingreso: ingresoCRC,
+        gasto: gastoCRC,
+        aporte: ingresoCRC - gastoCRC
+      };
+    }
+    return { q1: armar(q[1]), q2: armar(q[2]) };
   }
 
   return {
@@ -328,6 +367,8 @@ CDG.Model = (function () {
     ingresoFijoActivoEnPeriodo, ingresosFijosActivos, ingresosFijosVigentesHoy,
     guardarIngresoFijo, eliminarIngresoFijo,
     librePersona, gastosVariablesPersona, ahorroPersona, ahorroTotalPeriodo, historicoAhorro,
+    ingresoFijoPorMoneda, ingresoExtraPorMoneda, gastoFijoPorMoneda, gastoVariablePorMoneda,
+    combinarPorMoneda,
     historicoReportes, resolveDia, desgloseQuincenas
   };
 })();

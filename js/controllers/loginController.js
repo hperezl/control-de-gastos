@@ -15,11 +15,12 @@ CDG.Controllers.Login = (function () {
         <div class="field"><label>Contraseña</label><input type="password" id="loginPass" autocomplete="current-password"></div>
         <div id="loginError" style="color:var(--critical); font-size:13px; min-height:18px; margin-bottom:4px"></div>
         <div class="modal-actions" style="justify-content:space-between; align-items:center">
-          <button type="button" id="forgotLink" class="ghost" style="padding:4px 0; font-size:13px; color:var(--text-secondary)">¿Olvidaste tu contraseña?</button>
+          <button type="button" id="forgotLink" class="ghost" style="padding:5px; font-size:13px; color:var(--text-secondary)">¿Olvidaste tu contraseña?</button>
           <button class="primary" id="loginBtn">Entrar</button>
         </div>
         <p class="hint small" style="text-align:center; margin-top:16px">
-          ¿No tienes cuenta? <button type="button" id="signupLink" class="ghost" style="display:inline; padding:0; color:var(--accent); font-weight:600">Crear cuenta</button>
+          <span style="display:inline-block; padding-bottom:16px">¿No tienes cuenta?</span><br>
+          <button type="button" id="signupLink" class="ghost" style="padding:5px; color:var(--accent); font-weight:600">Crear cuenta</button>
         </p>
         <p class="hint small" style="margin-top:8px">🔒 Los datos viajan y se guardan cifrados (Firebase cifra en tránsito y en reposo automáticamente).</p>
       </div>

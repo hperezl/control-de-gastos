@@ -33,6 +33,7 @@ CDG.Cloud = (function () {
   function isSignedIn() { return ready && !!auth.currentUser; }
 
   function signIn(email, password) { return auth.signInWithEmailAndPassword(email, password); }
+  function signUp(email, password) { return auth.createUserWithEmailAndPassword(email, password); }
   function resetPassword(email) { return auth.sendPasswordResetEmail(email); }
   function signOut() {
     if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; }
@@ -64,5 +65,5 @@ CDG.Cloud = (function () {
     );
   }
 
-  return { init, isReady, isSignedIn, signIn, signOut, resetPassword, onAuthChange, cargarUnaVez, guardar, escuchar };
+  return { init, isReady, isSignedIn, signIn, signUp, signOut, resetPassword, onAuthChange, cargarUnaVez, guardar, escuchar };
 })();

@@ -81,6 +81,11 @@ CDG.App = (function () {
     document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
     wireMobileMenu();
     CDG.Controllers.Settings.init(cloudEnabled);
+    if (cloudEnabled) {
+      const logoutBtn = document.getElementById("logoutBtn");
+      logoutBtn.style.display = "";
+      logoutBtn.addEventListener("click", () => CDG.Cloud.signOut());
+    }
   }
 
   function bootDashboard() {

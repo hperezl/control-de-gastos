@@ -117,7 +117,7 @@ CDG.App = (function () {
 
   /* ---- cloud-backed boot ---- */
   function onSignedIn() {
-    CDG.Controllers.Login.showLoading("Cargando datos del hogar…");
+    CDG.Controllers.Login.showLoading("Cargando tu control de gastos…");
     CDG.Cloud.cargarUnaVez().then((remote) => {
       if (remote) {
         M.applyRemoteState(remote);

@@ -1,11 +1,14 @@
 window.CDG = window.CDG || {};
 
-/* Cloud sync (Firebase Auth + Firestore), one shared document for the whole
-   household. If the SDK or js/firebase-config.js aren't set up, init() returns
-   false and the app keeps working purely with localStorage (see app.js). */
+/* Cloud sync (Firebase Auth + Firestore). Registration is open to anyone, so
+   each account gets its OWN isolated document (controles/{uid}) — never a
+   document shared across different accounts. Two people can still share one
+   control on purpose by logging in with the same credentials; that's a
+   choice they make, not something the app grants by default. If the SDK or
+   js/firebase-config.js aren't set up, init() returns false and the app
+   keeps working purely with localStorage (see app.js). */
 CDG.Cloud = (function () {
   const COLLECTION = "controles";
-  const DOC_ID = "principal";
 
   let auth = null;
   let db = null;
@@ -44,7 +47,11 @@ CDG.Cloud = (function () {
     auth.onAuthStateChanged(cb);
   }
 
-  function docRef() { return db.collection(COLLECTION).doc(DOC_ID); }
+  function docRef() {
+    const uid = auth.currentUser && auth.currentUser.uid;
+    if (!uid) throw new Error("No hay sesión activa");
+    return db.collection(COLLECTION).doc(uid);
+  }
 
   function cargarUnaVez() {
     return docRef().get().then(snap => (snap.exists ? snap.data() : null));

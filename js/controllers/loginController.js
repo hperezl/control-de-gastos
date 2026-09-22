@@ -1,15 +1,16 @@
 window.CDG = window.CDG || {};
 CDG.Controllers = CDG.Controllers || {};
 
-/* Login screen: one shared email/password account for the whole household,
-   plus a "forgot password" flow confirmed by email (Firebase-hosted). */
+/* Login screen: email/password, one account per person — each account gets
+   its own isolated control (see js/firebase.js). Plus a "forgot password"
+   flow confirmed by email (Firebase-hosted). */
 CDG.Controllers.Login = (function () {
   function renderLogin() {
     const screen = document.getElementById("loginScreen");
     screen.innerHTML = `
       <div class="registro-card">
         <h1>Control de Gastos</h1>
-        <p class="hint">Ingresa con la cuenta del hogar para acceder al control compartido.</p>
+        <p class="hint">Inicia sesión con tu cuenta para acceder a tu control de gastos.</p>
         <div class="field"><label>Correo</label><input type="email" id="loginEmail" autocomplete="username"></div>
         <div class="field"><label>Contraseña</label><input type="password" id="loginPass" autocomplete="current-password"></div>
         <div id="loginError" style="color:var(--critical); font-size:13px; min-height:18px; margin-bottom:4px"></div>
@@ -86,7 +87,7 @@ CDG.Controllers.Login = (function () {
     screen.innerHTML = `
       <div class="registro-card">
         <h1>Crear cuenta</h1>
-        <p class="hint">Cualquier persona con el link de esta app puede crear una cuenta y va a poder ver y editar los datos del control compartido.</p>
+        <p class="hint">Se crea un control de gastos nuevo y privado para esta cuenta — nadie más lo ve, ni siquiera otras cuentas registradas en esta app.</p>
         <div class="field"><label>Correo</label><input type="email" id="signupEmail" value="${emailPrevio.replace(/"/g, "&quot;")}" autocomplete="username"></div>
         <div class="field"><label>Contraseña</label><input type="password" id="signupPass" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></div>
         <div class="field"><label>Confirmar contraseña</label><input type="password" id="signupPass2" autocomplete="new-password"></div>

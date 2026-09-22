@@ -56,14 +56,21 @@ recarga en el navegador del usuario (no confiar en que refresque solo).
 
 ## Nube (Firebase) — opcional, con fallback local
 
-Un solo login compartido (email/password) para todo el hogar; un único documento
-Firestore (`controles/principal`) con TODO el estado como JSON. `localStorage` sigue
-siendo la caché rápida/offline; `M.save()` escribe a ambos si hay sesión. Si
-`js/firebase-config.js` sigue con llaves de ejemplo (`"TU_..."`), `CDG.Cloud.init()`
-devuelve `false` y la app cae automáticamente a modo 100% local (sin pantalla de login) —
-esto es intencional, no un bug. Incluye "olvidé mi contraseña" (Firebase envía el correo
-y aloja la página de reset). No se agregó cifrado propio de la app (decisión explícita
-del usuario): se confía en el cifrado en tránsito/reposo que Firebase ya da por defecto.
+Registro **abierto** (cualquiera con el link puede crear cuenta, decisión explícita del
+usuario pese a la advertencia). Por eso cada cuenta tiene su **propio documento aislado**
+en Firestore: `controles/{uid}`, no uno compartido — ver `docRef()` en `firebase.js`. La
+regla de seguridad (`request.auth.uid == userId`) es lo que realmente aplica ese
+aislamiento; el código solo no basta. Si dos personas SÍ quieren compartir un control, lo
+hacen a propósito usando el mismo correo/contraseña — la app no lo asume por defecto.
+(Versión anterior: un solo documento `controles/principal` compartido por todos los que
+iniciaran sesión — se abandonó por el registro abierto, ver conversación del
+2026-09-22.) `localStorage` sigue siendo la caché rápida/offline; `M.save()` escribe a
+ambos si hay sesión. Si `js/firebase-config.js` sigue con llaves de ejemplo (`"TU_..."`),
+`CDG.Cloud.init()` devuelve `false` y la app cae automáticamente a modo 100% local (sin
+pantalla de login) — esto es intencional, no un bug. Incluye "olvidé mi contraseña"
+(Firebase envía el correo y aloja la página de reset) y "crear cuenta" en la misma
+pantalla de login. No se agregó cifrado propio de la app (decisión explícita del
+usuario): se confía en el cifrado en tránsito/reposo que Firebase ya da por defecto.
 
 ## Diseño
 

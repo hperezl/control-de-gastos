@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Gastos</title>
+<link rel="stylesheet" href="css/styles.css?v=20260921j">
+</head>
+<body>
+
+<div class="registro-screen" id="loginScreen"></div>
+<div class="registro-screen" id="registroScreen" style="display:none"></div>
+
+<div id="appScreen" style="display:none">
+  <div class="app">
+
+    <header class="top">
+      <div class="top-title">
+        <button class="ghost icon hamburger-btn" id="menuToggle" title="Menú" aria-label="Abrir menú" aria-expanded="false">☰</button>
+        <h1>Control de Gastos</h1>
+        <span class="fx-ticker" id="fxTicker"></span>
+      </div>
+      <div class="top-controls">
+        <div class="period-nav">
+          <button class="icon ghost" id="periodPrev" title="Periodo anterior">◀</button>
+          <span class="period-label" id="periodLabel"></span>
+          <button class="icon ghost" id="periodNext" title="Periodo siguiente">▶</button>
+        </div>
+        <button class="ghost icon" id="settingsBtn" title="Configuración">⚙️</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button data-tab="resumen" class="active">Resumen</button>
+      <button data-tab="movimientos">Movimientos</button>
+      <button data-tab="fijos">Ingresos y Gastos Fijos</button>
+      <button data-tab="ahorro">Ahorro</button>
+      <button data-tab="moneda">Moneda</button>
+    </nav>
+
+    <!-- RESUMEN -->
+    <div class="panel active" id="panel-resumen">
+      <div class="cards" id="resumenCards"></div>
+      <div class="chart-grid">
+        <section class="block">
+          <div class="block-head"><h2>Gastos por semana</h2></div>
+          <div class="chart-wrap"><svg id="weekChart" width="100%" height="200"></svg></div>
+        </section>
+        <section class="block">
+          <div class="block-head"><h2>Gastos por categoría (periodo mostrado)</h2></div>
+          <div class="donut-row">
+            <svg id="categoryDonut" width="200" height="200" viewBox="0 0 200 200"></svg>
+            <div class="donut-legend" id="categoryLegend"></div>
+          </div>
+        </section>
+      </div>
+      <div class="person-grid" id="resumenPersonasWrap"></div>
+    </div>
+
+    <!-- MOVIMIENTOS -->
+    <div class="panel" id="panel-movimientos">
+      <section class="block">
+        <div class="block-head">
+          <h2>Gastos del periodo</h2>
+          <div class="head-actions">
+            <select id="movPersonaFilter">
+              <option value="todos">Todas las personas</option>
+            </select>
+            <select id="movCategoriaFilter">
+              <option value="todos">Todas las categorías</option>
+            </select>
+            <button class="primary" id="addMovBtn">+ Nuevo gasto</button>
+          </div>
+        </div>
+        <div id="movimientosTableWrap"></div>
+      </section>
+    </div>
+
+    <!-- FIJOS -->
+    <div class="panel" id="panel-fijos">
+      <section class="block">
+        <div class="block-head">
+          <h2>Ingreso extra del periodo</h2>
+          <button class="primary" id="addExtraBtn">+ Agregar ingreso extra</button>
+        </div>
+        <p class="hint small" style="margin-bottom:12px">No es un ingreso fijo: solo cuenta para el periodo en el que se registra su fecha. Al cerrar el periodo, debe volver a ingresarse si aplica de nuevo.</p>
+        <div id="extraTableWrap"></div>
+      </section>
+
+      <div class="person-grid" id="fijosIngresoGrid"></div>
+
+      <section class="block">
+        <div class="block-head">
+          <h2>Rebajos (en $)</h2>
+          <button class="primary" id="addRebajoBtn">+ Agregar rebajo</button>
+        </div>
+        <div id="rebajosTableWrap"></div>
+      </section>
+
+      <div class="person-grid" id="fijosGastoGrid"></div>
+    </div>
+
+    <!-- AHORRO -->
+    <div class="panel" id="panel-ahorro">
+      <div class="cards" id="ahorroCards"></div>
+      <section class="block">
+        <div class="block-head"><h2>Detalle por persona (periodo mostrado)</h2></div>
+        <div id="ahorroDetalleWrap"></div>
+      </section>
+      <section class="block">
+        <div class="block-head"><h2>Histórico de ahorro por periodo</h2></div>
+        <div id="ahorroHistoricoWrap"></div>
+      </section>
+    </div>
+
+    <!-- MONEDA -->
+    <div class="panel" id="panel-moneda">
+      <section class="block">
+        <div class="block-head">
+          <h2>Tipos de cambio</h2>
+          <button class="ghost icon" id="fxRefreshBtn" title="Actualizar tipos de cambio">🔄</button>
+        </div>
+        <div class="fx-rates-strip" id="fxRatesStrip"></div>
+      </section>
+      <div class="fx-cards" id="fxCardsWrap"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBody"></div>
+</div>
+<div class="bar-tooltip" id="barTooltip"></div>
+<div class="toast" id="toast"></div>
+
+<!-- Firebase (compat build: plain globals, no bundler/build step needed).
+     If js/firebase-config.js still has placeholder keys, the app falls back
+     to local-only mode automatically (see js/firebase.js / js/app.js). -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js?v=20260921j"></script>
+<script src="js/firebase.js?v=20260921j"></script>
+
+<script src="js/utils.js?v=20260921j"></script>
+<script src="js/model.js?v=20260921j"></script>
+<script src="js/exchangeRate.js?v=20260921j"></script>
+<script src="js/currencyConverter.js?v=20260921j"></script>
+<script src="js/chart.js?v=20260921j"></script>
+<script src="js/views/registroView.js?v=20260921j"></script>
+<script src="js/controllers/loginController.js?v=20260921j"></script>
+<script src="js/controllers/registroController.js?v=20260921j"></script>
+<script src="js/controllers/settingsController.js?v=20260921j"></script>
+<script src="js/controllers/resumenController.js?v=20260921j"></script>
+<script src="js/controllers/movimientosController.js?v=20260921j"></script>
+<script src="js/controllers/fijosController.js?v=20260921j"></script>
+<script src="js/controllers/ahorroController.js?v=20260921j"></script>
+<script src="js/controllers/monedaController.js?v=20260921j"></script>
+<script src="js/controllers/backupController.js?v=20260921j"></script>
+<script src="js/app.js?v=20260921j"></script>
+</body>
+</html>

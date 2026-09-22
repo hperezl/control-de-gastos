@@ -60,13 +60,21 @@ CDG.Controllers = CDG.Controllers || {};
   function init(onComplete) {
     const screen = document.getElementById("registroScreen");
     const config = CDG.Model.state.config;
+    const cloudEnabled = !!(CDG.Cloud && CDG.Cloud.isReady());
     screen.innerHTML = `
       <div class="registro-card">
         <h1>Configura tu control de gastos</h1>
         <p class="hint">Registra quiénes van a compartir este control y, si aplica, la fecha de corte de la tarjeta de crédito que se usará para dividir los reportes mensuales.</p>
         ${CDG.Views.Registro.render(config, "reg", "Guardar y continuar")}
+        ${cloudEnabled ? `
+          <hr style="border:none;border-top:1px solid var(--gridline);margin:16px 0">
+          <button type="button" id="regLogout" style="width:100%">Cerrar sesión</button>
+        ` : ""}
       </div>
     `;
+    if (cloudEnabled) {
+      screen.querySelector("#regLogout").onclick = () => CDG.Cloud.signOut();
+    }
     wireRegistroForm(screen, "reg", config, (data) => {
       const st = CDG.Model.state;
       st.config.nombreControl = data.nombreControl;

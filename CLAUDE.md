@@ -49,10 +49,26 @@ recarga en el navegador del usuario (no confiar en que refresque solo).
   editarlos afecta retroactivamente todo el histórico de ahorro).
 - **Ingreso extra**: ingreso puntual atado a una fecha/periodo específico, no se repite
   solo automáticamente el siguiente periodo (`state.ingresosExtra`).
-- **Ahorro es calculado, no manual**: `Ahorro = Libre (ingreso fijo+extra − rebajos −
-  gastos fijos) − gastos variables del periodo`. No hay CRUD de "aportes de ahorro"; la
-  pestaña Ahorro solo muestra el cálculo por persona y un histórico periodo a periodo
-  (`M.historicoAhorro`, recorre desde el primer dato hasta hoy).
+- **"Neto" vs "Libre" en Resumen** (renombrado 2026-09-22, antes ambos se llamaban
+  "Libre" y confundía): `Neto = ingreso fijo+extra − rebajos − gastos fijos` (punto de
+  partida, antes de gastar); `Libre = Neto − gastos variables del periodo` (lo que
+  realmente queda ahora). `M.librePersona()` sigue devolviendo el `Neto` en su campo
+  `.libre` por compatibilidad — quien lo consuma debe restar `gastosVariablesPersona()`
+  aparte si quiere el "Libre" real (ver `personaResumenHtml` en `resumenController.js`).
+- **Ahorro es calculado, no manual**: mismo cálculo que "Libre" de arriba pero a nivel
+  periodo/total. No hay CRUD de "aportes de ahorro"; la pestaña Ahorro solo muestra el
+  cálculo por persona y un histórico periodo a periodo (`M.historicoAhorro`, recorre
+  desde el primer dato hasta hoy).
+- **Desglose por quincena**: `ingresosFijos`/`gastosFijos` tienen un campo numérico
+  `dia` (1–31, opcional) — quincena 1 = día 1–15, quincena 2 = día 16–31, sin relación
+  con la fecha de corte de tarjeta (son dos conceptos independientes). Registros viejos
+  solo tenían `periodo` como texto libre ("Día 13"); `M.resolveDia()` extrae el número de
+  ahí como respaldo si `dia` no está seteado. `M.desgloseQuincenas(persona, period)`
+  calcula ingreso/gasto/aporte por quincena, mostrado debajo de cada persona en Resumen.
+- **Pestaña Reportes**: histórico de TODOS los periodos con datos (no solo el que se está
+  viendo), filtrable por uno específico o "Todos". Usa `M.historicoReportes()` /
+  `M.periodosConDatos()` (el mismo generador de periodos que ya usaba `historicoAhorro`,
+  refactorizado para reusarse). No depende del navegador ◀ periodo ▶ del header.
 
 ## Nube (Firebase) — opcional, con fallback local
 
@@ -100,6 +116,38 @@ python3 -m http.server 8765   # desde la raíz del proyecto
 open http://localhost:8765/index.html
 ```
 (`file://` también funciona para todo excepto Firebase, que requiere http(s).)
+
+## Despliegue (producción)
+
+- **Repo:** `https://github.com/hperezl/control-de-gastos.git`, rama `main`. Servido gratis
+  por **GitHub Pages** desde la raíz (`/ `) del repo →
+  `https://hperezl.github.io/control-de-gastos/`.
+- **`git push` no funciona desde este entorno**: no hay credenciales de GitHub
+  configuradas aquí (falló con "could not read Username"), y la cuenta del usuario no
+  tiene `gh` ni Homebrew instalados. La forma que sí funciona, probada varias veces: subir
+  archivos a mano por la web de GitHub — **"Add file" → "Upload files"**, arrastrando
+  `index.html` y las carpetas `css`/`js` completas (arrastrar las carpetas, no su
+  contenido suelto, para que GitHub conserve la estructura de subcarpetas) → "Commit
+  changes". Repetir esto cada vez que haya cambios de código para reflejarlos en
+  producción.
+- **Antes de cada subida**: subir el sufijo de cache-busting (`?v=YYYYMMDDx`) en
+  `index.html` — si no, el navegador del usuario puede seguir sirviendo JS/CSS viejo desde
+  caché aunque el archivo en GitHub ya esté actualizado. Si después de subir y recargar el
+  usuario sigue viendo comportamiento viejo, **probar primero en una ventana de
+  incógnito** antes de asumir que hay un bug real — varias veces el código ya estaba
+  correcto en el servidor y el problema era solo caché del navegador (verificable con
+  `curl` contra la URL en vivo para confirmar qué hay realmente publicado).
+- **El git local** (`.git` en esta carpeta) tiene un commit inicial hecho por Claude, con
+  identidad local propia (`git config user.name/email`, solo para este repo — no toca la
+  config global de trabajo del usuario, que es distinta). Ese commit **nunca se pudo
+  pushear** (por la falta de credenciales) — todo lo que está en producción llegó por el
+  método de subida manual de arriba, así que el historial de GitHub y el git local de esta
+  carpeta están desincronizados. No asumir que `git log`/`git status` local refleja lo que
+  hay en producción — para eso, verificar con `curl` contra la URL de GitHub Pages.
+- **Proyecto Firebase:** `control-gastos-b947a` (plan Spark/gratis). Reglas de Firestore
+  ya publicadas: cada cuenta solo puede leer/escribir `controles/{su-propio-uid}` (ver
+  regla exacta en la sección "Nube" arriba). Dominio `hperezl.github.io` ya autorizado en
+  Authentication → Settings → Authorized domains.
 
 <!-- cloude-code-toolbox:mcp-skills-awareness-begin -->
 

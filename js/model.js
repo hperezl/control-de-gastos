@@ -258,22 +258,64 @@ CDG.Model = (function () {
     if (keys.length === 0) return null;
     return keys.sort()[0];
   }
-  function historicoAhorro() {
+  function periodosConDatos() {
     const first = primerPeriodoConDatos();
     const hoyKey = periodKeyForToday();
-    if (!first) return { total: 0, periodos: [] };
+    if (!first) return [];
     const periodos = [];
     let key = first > hoyKey ? hoyKey : first;
     let guard = 0;
     while (key <= hoyKey && guard < 600) {
-      const period = periodFromKey(key);
-      periodos.push({ key, label: periodLabel(period), ahorro: ahorroTotalPeriodo(period) });
+      periodos.push(periodFromKey(key));
       if (key === hoyKey) break;
       key = shiftPeriod(key, 1);
       guard++;
     }
+    return periodos;
+  }
+  function historicoAhorro() {
+    const periodos = periodosConDatos().map(period => ({ key: period.key, label: periodLabel(period), ahorro: ahorroTotalPeriodo(period) }));
     const total = periodos.reduce((s, p) => s + p.ahorro, 0);
     return { total, periodos };
+  }
+  function historicoReportes() {
+    return periodosConDatos().map(period => {
+      const gastoTotal = state.movimientos.filter(m => inPeriod(m.fecha, period)).reduce((s, m) => s + toColones(m.monto, m.moneda), 0);
+      const ingresoTotal = state.config.usuarios.reduce((s, p) => {
+        const L = librePersona(p, period);
+        return s + L.ingresoFijo + L.extra;
+      }, 0);
+      return { key: period.key, label: periodLabel(period), ingreso: ingresoTotal, gasto: gastoTotal, balance: ingresoTotal - gastoTotal, ahorro: ahorroTotalPeriodo(period) };
+    });
+  }
+
+  /* ---- día del mes (para desglose por quincena) ----
+     ingresosFijos/gastosFijos guardan un "día" numérico (1-31) desde esta
+     versión; registros viejos solo tenían "periodo" como texto libre (ej.
+     "Día 13") — se extrae el primer número como respaldo. */
+  function resolveDia(item) {
+    if (item.dia != null && item.dia !== "") return parseInt(item.dia, 10);
+    const m = (item.periodo || "").match(/\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  }
+  function quincenaDeDia(dia) { return dia != null && dia <= 15 ? 1 : 2; }
+
+  function desgloseQuincenas(persona, period) {
+    const q = { 1: { ingreso: 0, gasto: 0 }, 2: { ingreso: 0, gasto: 0 } };
+    ingresosFijosActivos(period, persona).forEach(x => {
+      q[quincenaDeDia(resolveDia(x))].ingreso += toColones(x.monto, x.moneda);
+    });
+    state.ingresosExtra.filter(x => x.persona === persona && inPeriod(x.fecha, period)).forEach(x => {
+      const dia = new Date(x.fecha + "T00:00:00").getDate();
+      q[quincenaDeDia(dia)].ingreso += toColones(x.monto, x.moneda);
+    });
+    state.gastosFijos.filter(x => x.persona === persona).forEach(x => {
+      q[quincenaDeDia(resolveDia(x))].gasto += toColones(x.monto, x.moneda);
+    });
+    return {
+      q1: { ingreso: q[1].ingreso, gasto: q[1].gasto, aporte: q[1].ingreso - q[1].gasto },
+      q2: { ingreso: q[2].ingreso, gasto: q[2].gasto, aporte: q[2].ingreso - q[2].gasto }
+    };
   }
 
   return {
@@ -285,6 +327,7 @@ CDG.Model = (function () {
     weekKey, weekLabel,
     ingresoFijoActivoEnPeriodo, ingresosFijosActivos, ingresosFijosVigentesHoy,
     guardarIngresoFijo, eliminarIngresoFijo,
-    librePersona, gastosVariablesPersona, ahorroPersona, ahorroTotalPeriodo, historicoAhorro
+    librePersona, gastosVariablesPersona, ahorroPersona, ahorroTotalPeriodo, historicoAhorro,
+    historicoReportes, resolveDia, desgloseQuincenas
   };
 })();

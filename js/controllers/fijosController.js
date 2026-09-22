@@ -8,7 +8,8 @@ CDG.Controllers = CDG.Controllers || {};
   /* ---- ingreso fijo (versioned: edits/removals never touch closed periods) ---- */
   function openFijoModal(kind, persona, existing) {
     const isEdit = !!existing;
-    const it = existing || { id: null, persona, descripcion: "", monto: "", moneda: "CRC", periodo: "" };
+    const it = existing || { id: null, persona, descripcion: "", monto: "", moneda: "CRC", periodo: "", dia: "" };
+    const diaActual = M.resolveDia(it);
     const label = kind === "ingreso" ? "ingreso fijo" : "gasto fijo";
     const warn = (kind === "ingreso" && isEdit && existing.vigenteDesde < M.periodKeyForToday())
       ? `<p class="hint small">Este cambio aplicará desde el periodo actual en adelante. Los reportes de periodos ya cerrados conservarán el monto anterior.</p>` : "";
@@ -16,10 +17,11 @@ CDG.Controllers = CDG.Controllers || {};
       <h3>${isEdit ? "Editar" : "Nuevo"} ${label} — ${U.escapeHtml(persona)}</h3>
       <div class="field"><label>Descripción</label><input type="text" id="fDesc" value="${U.escapeHtml(it.descripcion)}" placeholder="Ej. Tel ${U.escapeHtml(persona)}"></div>
       <div class="field-row three">
-        <div class="field"><label>Periodo / Día</label><input type="text" id="fPeriodo" value="${U.escapeHtml(it.periodo)}" placeholder="Ej. Día 13"></div>
+        <div class="field"><label>Día del mes</label><input type="number" min="1" max="31" id="fDia" value="${diaActual != null ? diaActual : ""}" placeholder="Ej. 13"></div>
         <div class="field"><label>Monto</label><input type="number" step="0.01" id="fMonto" value="${it.monto}"></div>
         <div class="field"><label>Moneda</label>${U.monedaSegHtml("fMonedaSeg", it.moneda)}</div>
       </div>
+      <p class="hint small">El día se usa para saber a qué quincena (1–15 o 16–31) pertenece este monto.</p>
       ${warn}
       <div class="modal-actions">
         <button id="fCancel">Cancelar</button>
@@ -31,10 +33,13 @@ CDG.Controllers = CDG.Controllers || {};
       root.querySelector("#fSave").onclick = () => {
         const monto = parseFloat(root.querySelector("#fMonto").value);
         if (isNaN(monto)) { U.toast("Ingresa un monto válido"); return; }
+        const diaVal = root.querySelector("#fDia").value;
+        const dia = diaVal === "" ? null : Math.min(31, Math.max(1, parseInt(diaVal, 10)));
         const datos = {
           persona,
           descripcion: root.querySelector("#fDesc").value.trim(),
-          periodo: root.querySelector("#fPeriodo").value.trim(),
+          dia,
+          periodo: dia != null ? ("Día " + dia) : "",
           monto,
           moneda: getMoneda()
         };

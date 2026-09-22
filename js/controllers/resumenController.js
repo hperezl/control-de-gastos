@@ -8,16 +8,32 @@ CDG.Controllers = CDG.Controllers || {};
   function personaResumenHtml(persona, period) {
     const L = M.librePersona(persona, period);
     const gastoVar = M.gastosVariablesPersona(persona, period);
-    const ahorro = L.libre - gastoVar;
+    const libreReal = L.libre - gastoVar;
+    const Q = M.desgloseQuincenas(persona, period);
     return `
       <div class="cards" style="margin-bottom:0">
         <div class="card"><div class="label">Ingreso fijo</div><div class="value">${U.fmtCRC(L.ingresoFijo)}</div></div>
         ${L.extra > 0 ? `<div class="card"><div class="label">Ingreso extra</div><div class="value">${U.fmtCRC(L.extra)}</div></div>` : ""}
         ${L.rebajos > 0 ? `<div class="card"><div class="label">Rebajos</div><div class="value neg">${U.fmtCRC(L.rebajos)}</div></div>` : ""}
         <div class="card"><div class="label">Gastos fijos</div><div class="value">${U.fmtCRC(L.gastoFijo)}</div></div>
-        <div class="card"><div class="label">Libre</div><div class="value ${L.libre >= 0 ? "pos" : "neg"}">${U.fmtCRC(L.libre)}</div></div>
+        <div class="card"><div class="label">Neto</div><div class="value ${L.libre >= 0 ? "pos" : "neg"}">${U.fmtCRC(L.libre)}</div><div class="sub">Ingreso − rebajos − gastos fijos</div></div>
         <div class="card"><div class="label">Gastos variables</div><div class="value">${U.fmtCRC(gastoVar)}</div></div>
-        <div class="card"><div class="label">Ahorro del periodo</div><div class="value ${ahorro >= 0 ? "pos" : "neg"}">${U.fmtCRC(ahorro)}</div></div>
+        <div class="card"><div class="label">Libre</div><div class="value ${libreReal >= 0 ? "pos" : "neg"}">${U.fmtCRC(libreReal)}</div><div class="sub">Neto − gastos variables</div></div>
+      </div>
+      <div class="quincena-row">
+        ${quincenaCardHtml("Quincena 1", "día 1–15", Q.q1)}
+        ${quincenaCardHtml("Quincena 2", "día 16–31", Q.q2)}
+      </div>
+    `;
+  }
+
+  function quincenaCardHtml(titulo, sub, q) {
+    return `
+      <div class="quincena-card">
+        <div class="quincena-title">${titulo} <span class="hint small" style="margin:0">(${sub})</span></div>
+        <div class="quincena-line"><span>Ingreso</span><span>${U.fmtCRC(q.ingreso)}</span></div>
+        <div class="quincena-line"><span>Gastos fijos</span><span>${U.fmtCRC(q.gasto)}</span></div>
+        <div class="quincena-line total"><span>Aporte</span><span class="${q.aporte >= 0 ? "pos" : "neg"}">${U.fmtCRC(q.aporte)}</span></div>
       </div>
     `;
   }
@@ -28,17 +44,14 @@ CDG.Controllers = CDG.Controllers || {};
     const gastoTotal = gastosPeriodo.reduce((s, m) => s + M.toColones(m.monto, m.moneda), 0);
 
     const usuarios = M.state.config.usuarios;
-    const ingresoTotal = usuarios.reduce((s, p) => {
-      const L = M.librePersona(p, period);
-      return s + L.ingresoFijo + L.extra;
-    }, 0);
-    const balance = ingresoTotal - gastoTotal;
+    const ingresoNetoTotal = usuarios.reduce((s, p) => s + M.librePersona(p, period).libre, 0);
+    const balance = ingresoNetoTotal - gastoTotal;
     const ahorroAcumulado = M.historicoAhorro().total;
 
     document.getElementById("resumenCards").innerHTML = `
-      <div class="card"><div class="label">Ingresos del periodo</div><div class="value pos">${U.fmtCRC(ingresoTotal)}</div><div class="sub">Ingreso fijo + extra</div></div>
-      <div class="card"><div class="label">Gastos del periodo</div><div class="value neg">${U.fmtCRC(gastoTotal)}</div></div>
-      <div class="card"><div class="label">Balance del periodo</div><div class="value ${balance >= 0 ? "pos" : "neg"}">${U.fmtCRC(balance)}</div><div class="sub">Ingresos − Gastos</div></div>
+      <div class="card"><div class="label">Ingreso neto del periodo</div><div class="value pos">${U.fmtCRC(ingresoNetoTotal)}</div><div class="sub">Ingreso fijo + extra − rebajos − gastos fijos</div></div>
+      <div class="card"><div class="label">Gastos variables del periodo</div><div class="value neg">${U.fmtCRC(gastoTotal)}</div></div>
+      <div class="card"><div class="label">Balance / Libre del periodo</div><div class="value ${balance >= 0 ? "pos" : "neg"}">${U.fmtCRC(balance)}</div><div class="sub">Ingreso neto − gastos variables</div></div>
       <div class="card"><div class="label">Ahorro acumulado</div><div class="value">${U.fmtCRC(ahorroAcumulado)}</div></div>
     `;
 

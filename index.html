@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Control de Gastos</title>
-<link rel="stylesheet" href="css/styles.css?v=20260921o">
+<link rel="stylesheet" href="css/styles.css?v=20260921q">
 </head>
 <body>
 
@@ -37,6 +37,7 @@
       <button data-tab="fijos">Ingresos y Gastos Fijos</button>
       <button data-tab="ahorro">Ahorro</button>
       <button data-tab="moneda">Moneda</button>
+      <button data-tab="reportes">Reportes</button>
     </nav>
 
     <!-- RESUMEN -->
@@ -126,6 +127,22 @@
       <div class="fx-cards" id="fxCardsWrap"></div>
     </div>
 
+    <!-- REPORTES -->
+    <div class="panel" id="panel-reportes">
+      <div class="cards" id="reportesCards"></div>
+      <section class="block">
+        <div class="block-head">
+          <h2>Histórico de reportes</h2>
+          <div class="head-actions">
+            <select id="reportesFiltro">
+              <option value="todos">Todos los periodos</option>
+            </select>
+          </div>
+        </div>
+        <div id="reportesTableWrap"></div>
+      </section>
+    </div>
+
   </div>
 </div>
 
@@ -141,24 +158,25 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-<script src="js/firebase-config.js?v=20260921o"></script>
-<script src="js/firebase.js?v=20260921o"></script>
+<script src="js/firebase-config.js?v=20260921q"></script>
+<script src="js/firebase.js?v=20260921q"></script>
 
-<script src="js/utils.js?v=20260921o"></script>
-<script src="js/model.js?v=20260921o"></script>
-<script src="js/exchangeRate.js?v=20260921o"></script>
-<script src="js/currencyConverter.js?v=20260921o"></script>
-<script src="js/chart.js?v=20260921o"></script>
-<script src="js/views/registroView.js?v=20260921o"></script>
-<script src="js/controllers/loginController.js?v=20260921o"></script>
-<script src="js/controllers/registroController.js?v=20260921o"></script>
-<script src="js/controllers/settingsController.js?v=20260921o"></script>
-<script src="js/controllers/resumenController.js?v=20260921o"></script>
-<script src="js/controllers/movimientosController.js?v=20260921o"></script>
-<script src="js/controllers/fijosController.js?v=20260921o"></script>
-<script src="js/controllers/ahorroController.js?v=20260921o"></script>
-<script src="js/controllers/monedaController.js?v=20260921o"></script>
-<script src="js/controllers/backupController.js?v=20260921o"></script>
-<script src="js/app.js?v=20260921o"></script>
+<script src="js/utils.js?v=20260921q"></script>
+<script src="js/model.js?v=20260921q"></script>
+<script src="js/exchangeRate.js?v=20260921q"></script>
+<script src="js/currencyConverter.js?v=20260921q"></script>
+<script src="js/chart.js?v=20260921q"></script>
+<script src="js/views/registroView.js?v=20260921q"></script>
+<script src="js/controllers/loginController.js?v=20260921q"></script>
+<script src="js/controllers/registroController.js?v=20260921q"></script>
+<script src="js/controllers/settingsController.js?v=20260921q"></script>
+<script src="js/controllers/resumenController.js?v=20260921q"></script>
+<script src="js/controllers/movimientosController.js?v=20260921q"></script>
+<script src="js/controllers/fijosController.js?v=20260921q"></script>
+<script src="js/controllers/ahorroController.js?v=20260921q"></script>
+<script src="js/controllers/monedaController.js?v=20260921q"></script>
+<script src="js/controllers/reportesController.js?v=20260921q"></script>
+<script src="js/controllers/backupController.js?v=20260921q"></script>
+<script src="js/app.js?v=20260921q"></script>
 </body>
 </html>

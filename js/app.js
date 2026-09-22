@@ -67,6 +67,7 @@ CDG.App = (function () {
     CDG.Controllers.Fijos.render();
     CDG.Controllers.Ahorro.render();
     if (CDG.Controllers.Moneda) CDG.Controllers.Moneda.renderRatesStrip();
+    if (CDG.Controllers.Reportes) CDG.Controllers.Reportes.render();
   }
 
   function wireTopBar() {
@@ -97,6 +98,7 @@ CDG.App = (function () {
       CDG.Controllers.Movimientos.init();
       CDG.Controllers.Fijos.init();
       CDG.Controllers.Moneda.init();
+      CDG.Controllers.Reportes.init();
       controllersInitialized = true;
     }
     refreshAll();

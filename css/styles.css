@@ -190,6 +190,17 @@ nav.tabs button.active { background: var(--accent); color: var(--accent-ink); }
 .card .sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 .card .value.pos { color: var(--success); }
 .card .value.neg { color: var(--critical); }
+.pos { color: var(--success); }
+.neg { color: var(--critical); }
+
+.quincena-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+.quincena-card {
+  background: var(--page); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+}
+.quincena-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.quincena-line { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; color: var(--text-secondary); }
+.quincena-line.total { border-top: 1px solid var(--gridline); margin-top: 4px; padding-top: 6px; font-weight: 700; color: var(--text-primary); }
+.quincena-line.total span:first-child { color: var(--text-primary); }
 
 section.block {
   background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;

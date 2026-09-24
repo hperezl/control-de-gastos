@@ -166,6 +166,7 @@ CDG.App = (function () {
 
   function init() {
     U.applyTheme(U.getThemeChoice());
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
     const ok = CDG.Cloud && CDG.Cloud.init();
     if (ok) startCloudMode(); else startLocalOnly();
   }

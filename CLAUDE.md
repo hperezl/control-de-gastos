@@ -222,6 +222,47 @@ propio (`U.monedaSegHtml`/`wireMonedaSeg`), no un `<select>` nativo — los pick
 nativos de 2 opciones se posicionan mal en algunos navegadores móviles. Persona/
 Categoría sí siguen siendo `<select>` nativo (muchas opciones, funciona bien).
 
+## PWA (instalable en Android)
+
+Agregado 2026-09-24, a pedido explícito ("que esta aplicación se pueda instalar en
+Android"). Tres piezas nuevas:
+
+- **`manifest.webmanifest`** (raíz del repo, enlazado en `index.html` con
+  `<link rel="manifest">`): nombre, `theme_color`/`background_color` de marca,
+  `display: "standalone"`, y los íconos de `icons/`.
+- **`icons/icon-{192,512}.png`** (propósito `"any"`, esquina redondeada) e
+  **`icons/icon-maskable-{192,512}.png`** (propósito `"maskable"`, el símbolo ₡ ocupa
+  ~38% del lienzo para sobrevivir el recorte circular/squircle de los íconos adaptativos
+  de Android) — generados con Playwright/Chromium renderizando HTML+CSS a PNG (no hay
+  Pillow/ImageMagick en este entorno), no son assets de diseño con fuente propia; si se
+  quiere un ícono con más cuidado de marca, reemplazar estos 4 PNG manteniendo los mismos
+  nombres/tamaños.
+- **`sw.js`** (service worker, raíz del repo, registrado en `CDG.App.init()` en
+  `app.js`): sin esto Chrome/Android no ofrece instalar la app. Cachea en runtime, no por
+  lista fija de archivos — cache-first para todo lo que NO sea `.html`/navegación
+  (aprovecha que `css/js` ya llevan `?v=YYYYMMDDx`, así que una URL cacheada nunca cambia
+  de contenido) y network-first para el propio `index.html`/navegaciones (para que una
+  actualización de la app se note de inmediato estando online; si falla por estar
+  offline, cae al `index.html` cacheado). **Ojo con `Response.clone()` en un service
+  worker**: hay que clonar la respuesta de forma síncrona apenas llega de `fetch()`,
+  antes de cualquier `await`/`.then()` — si el clone se hace dentro de una continuación
+  async posterior (ej. después de `caches.open()`), el body ya puede estar "in use" por
+  el propio `respondWith()` y tira `TypeError: Response body is already used`,
+  fallando el cacheo en silencio (bug real que pasó aquí, cuesta detectarlo porque no
+  rompe la carga de la página, solo deja el Cache Storage vacío). Igual de importante:
+  el `cache.put()` (y cualquier trabajo async fuera de la promesa que recibe
+  `respondWith()`) tiene que ir envuelto en `event.waitUntil()`, si no el navegador puede
+  matar el service worker antes de que termine de escribir el caché.
+- La primerísima visita a la app (antes de que el service worker esté activo) nunca pasa
+  por el `fetch` handler, así que no queda cacheada por esa carga — hace falta una
+  segunda navegación (recarga, o abrir otra pestaña) ya bajo control del service worker
+  para que quede todo cacheado y la app funcione sin conexión. Esto es normal en
+  cualquier PWA, no es un bug de esta implementación.
+- Como el `file://` local no soporta service workers (necesita contexto seguro: http(s)
+  o localhost, igual que Firebase — ver sección "Cómo correr en desarrollo"), la
+  instalación real solo se puede probar sirviendo la app por http(s) — local con
+  `python3 -m http.server` o ya en GitHub Pages.
+
 ## Cómo correr en desarrollo
 
 ```
@@ -265,11 +306,12 @@ open http://localhost:8765/index.html
 
 
 
+
 <!-- cloude-code-toolbox:mcp-skills-awareness-begin -->
 
 ### MCP & Skills awareness (Cloude Code ToolBox)
 
-_Last synced: 2026-09-24T21:20:06.089Z._
+_Last synced: 2026-09-24T22:04:09.318Z._
 
 - **Full report:** `.claude/cloude-code-toolbox-mcp-skills-awareness.md` in this workspace (auto-overwritten on each scan). Use it as ground truth for configured servers and skill folders.
 - **MCP:** For **live tools** in Claude Code, enable the matching server via `/mcp`. Servers are configured in `~/.claude.json` (user) and `.mcp.json` (project).

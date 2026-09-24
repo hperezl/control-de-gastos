@@ -18,8 +18,13 @@
   --series-gasto:   #df1c1c;
   --series-ahorro:  #10b981;
   --series-cat-1:   #2a78d6;
-  --series-cat-2:   #1baf7a;
-  --series-cat-3:   #eda100;
+  --series-cat-2:   #eb6834;
+  --series-cat-3:   #1baf7a;
+  --series-cat-4:   #eda100;
+  --series-cat-5:   #e87ba4;
+  --series-cat-6:   #008300;
+  --series-cat-7:   #4a3aa7;
+  --series-cat-8:   #e34948;
   --accent:         #df1c1c;
   --accent-ink:     #ffffff;
   --shadow: 0 1px 2px rgba(18,24,38,0.06), 0 4px 12px rgba(18,24,38,0.06);
@@ -42,8 +47,13 @@
     --series-gasto:   #ef4444;
     --series-ahorro:  #34d399;
     --series-cat-1:   #3987e5;
-    --series-cat-2:   #199e70;
-    --series-cat-3:   #c98500;
+    --series-cat-2:   #d95926;
+    --series-cat-3:   #199e70;
+    --series-cat-4:   #c98500;
+    --series-cat-5:   #d55181;
+    --series-cat-6:   #008300;
+    --series-cat-7:   #9085e9;
+    --series-cat-8:   #e66767;
     --accent:         #ef4444;
     --accent-ink:     #ffffff;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.3);
@@ -66,8 +76,13 @@
   --series-gasto:   #ef4444;
   --series-ahorro:  #34d399;
   --series-cat-1:   #3987e5;
-  --series-cat-2:   #199e70;
-  --series-cat-3:   #c98500;
+  --series-cat-2:   #d95926;
+  --series-cat-3:   #199e70;
+  --series-cat-4:   #c98500;
+  --series-cat-5:   #d55181;
+  --series-cat-6:   #008300;
+  --series-cat-7:   #9085e9;
+  --series-cat-8:   #e66767;
   --accent:         #ef4444;
   --accent-ink:     #ffffff;
   --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.3);
@@ -151,30 +166,76 @@ nav.tabs button {
 }
 nav.tabs button:hover:not(.active) { background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text-primary); }
 nav.tabs button.active { background: var(--accent); color: var(--accent-ink); }
+.nav-menu-extra { display: none; }
+.nav-drawer-head { display: none; }
 
 /* mobile / tablet: hamburger-driven nav instead of the horizontal tab bar */
 @media (max-width: 860px) {
   .hamburger-btn { display: inline-flex; align-items: center; justify-content: center; }
 
+  .app { position: relative; }
+
+  /* Configuración / Cerrar sesión move into the dropdown menu on mobile —
+     hidden in the header so they only show while the menu is open. */
+  #settingsBtn, #logoutBtn { display: none !important; }
+
   nav.tabs {
-    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
     flex-direction: column;
     gap: 2px;
-    border: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface-1);
-    box-shadow: var(--shadow);
+    border: none;
+    border-radius: 0;
+    background: #000;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.35);
     padding: 6px;
     overflow-x: visible;
+    transform: translateX(-110%);
+    transition: transform .5s ease;
   }
-  nav.tabs.open { display: flex; }
+  /* Being position:absolute + z-index puts the whole drawer — including its
+     own title row below — above the (position:static) header underneath, so
+     opening it naturally covers the header instead of needing to fake the
+     header's height or elevate it separately. */
+  nav.tabs.open { transform: translateX(0); }
   nav.tabs button {
     text-align: left;
     border-radius: 0;
     padding: 10px 12px;
+    color: #fff;
   }
+  nav.tabs button:hover:not(.active) { color: #fff; }
   nav.tabs button.active { background: var(--accent); color: var(--accent-ink); }
+
+  /* Title + close button + tipo de cambio, genuinely inside the drawer (not
+     a separate positioned element) — the tipo de cambio always sits on its
+     own line below the title, in or out of the menu, so nothing shifts
+     between the open and closed states. */
+  .nav-drawer-head {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 6px 14px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+  nav.tabs.open .nav-drawer-head { display: flex; }
+  .nav-drawer-head #menuCloseBtn { color: #fff; flex-shrink: 0; }
+  .nav-drawer-title { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .nav-drawer-title h2 { margin: 0; font-size: 17px; font-weight: 700; color: #fff; }
+
+  .nav-menu-extra {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+  }
+  .nav-menu-extra button { text-align: left; }
 }
 
 .panel { display: none; }
@@ -224,6 +285,7 @@ tr:hover td { background: color-mix(in srgb, var(--text-primary) 4%, transparent
 .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
 .tag.ingreso { background: color-mix(in srgb, var(--series-ingreso) 18%, transparent); color: var(--series-ingreso); }
 .tag.gasto { background: color-mix(in srgb, var(--series-gasto) 18%, transparent); color: var(--series-gasto); }
+.tag.compartido { background: color-mix(in srgb, var(--text-muted) 18%, transparent); color: var(--text-secondary); }
 
 /* mobile: reports stack into "label: value" cards instead of a horizontal table */
 @media (max-width: 640px) {

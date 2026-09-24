@@ -41,20 +41,47 @@ recarga en el navegador del usuario (no confiar en que refresque solo).
   controla qué periodo se está viendo en Resumen/Movimientos/Fijos/Ahorro.
 - **Movimientos = solo gastos variables** (categoría fija + descripción corta opcional).
   Los ingresos NO viven aquí.
+- **Persona "Compartido" en Movimientos**: cuando hay 2+ usuarios, `M.personasDisponibles()`
+  agrega una opción extra `"Compartido"` al `<select>` de Persona (`model.js`, no es un
+  usuario real de `config.usuarios`). **Ya existía la opción en el dropdown antes de
+  2026-09-24**, pero antes se guardaba tal cual como un solo `movimiento` con
+  `persona: "Compartido"` — como ninguna función de por-persona filtra por ese nombre
+  (`gastosVariablesPersona`, `gastoVariablePorMoneda`, etc. hacen `m.persona === persona`),
+  ese gasto contaba en los totales del periodo pero no se le atribuía a nadie en Resumen/
+  Ahorro por persona. Desde 2026-09-24, elegir "Compartido" y guardar reparte el monto
+  entre los usuarios reales (`M.state.config.usuarios`, no `personasDisponibles()` —
+  excluye el pseudo-usuario "Compartido" en sí) creando un `movimiento` independiente por
+  persona con `Math.ceil(monto / cantidadUsuarios)` — sin decimales, siempre redondeado
+  hacia arriba (el total repartido puede quedar levemente por encima del original, nunca
+  por debajo). Aplica tanto al crear como al editar (editar un gasto y cambiarlo a
+  "Compartido" borra el registro único y lo reemplaza por los N repartidos). Son
+  registros independientes sin id de grupo — editar o borrar uno de los repartidos después
+  no afecta a los demás. Cada mitad repartida lleva `compartido: true` (campo nuevo,
+  aditivo) — es lo que permite que el filtro "Compartido" de la tabla de Movimientos siga
+  funcionando aunque ningún `movimiento` real tenga ya `persona: "Compartido"`: ese filtro
+  compara `m.compartido` en vez de `m.persona` (ver `render()` en
+  `movimientosController.js`). Si se edita una mitad repartida y se le pone una persona
+  normal (no "Compartido") al guardar, pierde la marca `compartido` — deja de contarse
+  como parte de un gasto compartido, a propósito (ya se desligó del reparto original).
 - **Ingresos fijos con versionado temporal**: editar/eliminar un ingreso fijo que ya fue
   usado por un periodo cerrado no lo sobrescribe — cierra esa versión (`vigenteHasta`) y
   crea una nueva vigente desde el periodo actual en adelante (`M.guardarIngresoFijo` /
   `M.eliminarIngresoFijo`). Así los reportes de meses cerrados no cambian.
-  **Gastos fijos y rebajos NO están versionados** (limitación conocida y aceptada:
-  editarlos afecta retroactivamente todo el histórico de ahorro).
+  **Gastos fijos NO están versionados** (limitación conocida y aceptada: editarlos afecta
+  retroactivamente todo el histórico de ahorro).
 - **Ingreso extra**: ingreso puntual atado a una fecha/periodo específico, no se repite
   solo automáticamente el siguiente periodo (`state.ingresosExtra`).
+- **Rebajos: eliminado por completo** (2026-09-22, a pedido explícito). Ya no hay tarjeta,
+  modal, ni resta en el cálculo de Neto/Libre. `state.rebajos` sigue existiendo en el
+  esquema de datos por si algún usuario tenía registros ahí (no se borran, regla de
+  "aditivo no destructivo" de abajo), pero nada los lee ni los muestra — si vuelve a
+  pedirse esta función, hay que reconstruirla desde cero, no reactivar el código viejo.
 - **"Neto" vs "Libre" en Resumen** (renombrado 2026-09-22, antes ambos se llamaban
-  "Libre" y confundía): `Neto = ingreso fijo+extra − rebajos − gastos fijos` (punto de
-  partida, antes de gastar); `Libre = Neto − gastos variables del periodo` (lo que
-  realmente queda ahora). `M.librePersona()` sigue devolviendo el `Neto` en su campo
-  `.libre` por compatibilidad — quien lo consuma debe restar `gastosVariablesPersona()`
-  aparte si quiere el "Libre" real (ver `personaResumenHtml` en `resumenController.js`).
+  "Libre" y confundía): `Neto = ingreso fijo+extra − gastos fijos` (punto de partida,
+  antes de gastar); `Libre = Neto − gastos variables del periodo` (lo que realmente queda
+  ahora). `M.librePersona()` sigue devolviendo el `Neto` en su campo `.libre` por
+  compatibilidad — quien lo consuma debe restar `gastosVariablesPersona()` aparte si
+  quiere el "Libre" real (ver `personaResumenHtml` en `resumenController.js`).
 - **Ahorro es calculado, no manual**: mismo cálculo que "Libre" de arriba pero a nivel
   periodo/total. No hay CRUD de "aportes de ahorro"; la pestaña Ahorro solo muestra el
   cálculo por persona y un histórico periodo a periodo (`M.historicoAhorro`, recorre
@@ -64,11 +91,49 @@ recarga en el navegador del usuario (no confiar en que refresque solo).
   con la fecha de corte de tarjeta (son dos conceptos independientes). Registros viejos
   solo tenían `periodo` como texto libre ("Día 13"); `M.resolveDia()` extrae el número de
   ahí como respaldo si `dia` no está seteado. `M.desgloseQuincenas(persona, period)`
-  calcula ingreso/gasto/aporte por quincena, mostrado debajo de cada persona en Resumen.
+  calcula ingreso/gasto/aporte por quincena, mostrado debajo de cada persona en Resumen
+  (también consciente de moneda, ver bullet siguiente).
+- **Montos "conscientes de moneda" en Resumen** (2026-09-22): las tarjetas de Ingreso
+  fijo/extra, Gastos fijos, Gastos variables, Neto, Libre y las de quincena YA NO
+  convierten ciegamente a ₡ — si el monto está 100% en $, se muestra en $ con "≈ ₡..."
+  abajo en chico; si hay mezcla de $ y ₡ (ej. algunos gastos fijos en cada moneda), se
+  parte en dos tarjetas/líneas, una por moneda, cada una con su propio color según signo.
+  Funciones clave en `model.js`: `sumaPorMoneda`, `ingresoFijoPorMoneda`,
+  `ingresoExtraPorMoneda`, `gastoFijoPorMoneda`, `gastoVariablePorMoneda`,
+  `combinarPorMoneda` (combina varios desgloses con signo, ej. Neto = ingreso − gastoFijo
+  sin pasar por conversión). **Importante: esto es solo presentación** — las tarjetas
+  agregadas de arriba de Resumen ("Ingreso neto del periodo", "Balance", "Ahorro
+  acumulado") y Reportes siguen sumando todo convertido a ₡ vía `librePersona()`
+  (que internamente usa `toColones()` sin cambios); nunca tocar esa función al extender
+  el desglose por moneda a una vista nueva — crear un helper `xPorMoneda` aparte, como
+  los de arriba.
+- **Excepción a "nunca mezclar monedas" — la tarjeta "Libre" sí convierte** (2026-09-24,
+  a pedido explícito): con la regla de arriba, si el ingreso fijo de una persona era
+  100% en $ y sus gastos variables del periodo estaban en ₡, "Libre" se partía en dos
+  tarjetas — "Libre ($)" con el Neto normal, y una "Libre (₡)" suelta y negativa (ej.
+  "-₡5 000 · Neto − gastos variables") sin ningún ingreso en ₡ que la compense, lo cual
+  se veía como un error. Se pidió que en vez de eso, el gasto variable en la moneda
+  distinta se convierta a la moneda del ingreso fijo ("moneda de casa") y se reste ahí,
+  dejando una sola tarjeta "Libre" en esa moneda con la conversión "≈" abajo — igual que
+  cualquier tarjeta de una sola moneda. Implementado en `libreCardHtml()`
+  (`resumenController.js`) + `M.toDolares()` (nuevo, inverso de `toColones`, en
+  `model.js`). Esto **solo aplica cuando el ingreso fijo de la persona es 100% de una
+  moneda** (no mezclado entre $ y ₡ él mismo) — si el propio Neto ya está mezclado, no
+  hay una "moneda de casa" clara y se mantiene el desglose de dos tarjetas de siempre.
+  Las tarjetas agregadas de arriba de Resumen y Reportes no cambian (siguen sin tocar
+  `librePersona()`/`toColones()`, ver bullet anterior).
+- **Categorías de gasto**: "Familia" se reemplazó por "Familia materna" y "Familia
+  paterna" (2026-09-22, en `CATEGORIAS_GASTO` de `model.js`). Gastos viejos guardados con
+  categoria="Familia" conservan ese texto tal cual (se siguen viendo bien en la tabla),
+  pero ya no aparece como opción en el `<select>` — si alguien edita uno de esos gastos
+  viejos, tiene que elegir una categoría nueva al guardar.
 - **Pestaña Reportes**: histórico de TODOS los periodos con datos (no solo el que se está
   viendo), filtrable por uno específico o "Todos". Usa `M.historicoReportes()` /
   `M.periodosConDatos()` (el mismo generador de periodos que ya usaba `historicoAhorro`,
-  refactorizado para reusarse). No depende del navegador ◀ periodo ▶ del header.
+  refactorizado para reusarse). No depende del navegador ◀ periodo ▶ del header. La
+  columna "Gastos" incluye gastos fijos + variables (corregido 2026-09-22; antes solo
+  sumaba variables, lo que hacía que "Balance" no coincidiera con "Ahorro" del mismo
+  periodo — ahora sí coinciden, son la misma cifra vista desde dos ángulos).
 - **Regla no escrita pero seguida hasta ahora: los cambios de esquema son aditivos, nunca
   destructivos.** Ningún cambio de código borra o sobrescribe datos existentes del
   usuario — campos nuevos (ej. `dia` en fijos) se agregan junto a los viejos (`periodo`),
@@ -104,13 +169,52 @@ Paleta de marca personalizada (no la del skill de dataviz por defecto): rojo `#D
 (texto), verde `#10B981`/`#047857` (ingresos, dos pasos por contraste). Variables CSS en
 `:root` / `@media (prefers-color-scheme: dark)` / `:root[data-theme="dark"]` en
 `styles.css`. El donut de categorías usa una sub-paleta categórica validada aparte
-(`--series-cat-1/2/3`, azul/aqua/amarillo) porque el rojo/verde ya son semánticos
-(gasto/ingreso) — capado a 3 categorías + "Otros" por seguridad de daltonismo en gráficos
-tipo pie (ver comentario en `chart.js`).
+(`--series-cat-1..8`, las 8 tonalidades fijas del skill de dataviz en su orden
+validado: azul/naranja/aqua/amarillo/magenta/verde/violeta/rojo) porque el rojo/verde
+del branding ya son semánticos (gasto/ingreso) — capado a 8 categorías + "Otros" antes de
+caer a gris (ver comentario en `chart.js`). Se usa el check de "pares adyacentes" del
+skill (no "todos los pares") porque en un donut ordenado por valor cada gajo solo
+toca a su vecino inmediato, no a los demás — antes estaba capado a solo 3 categorías
+(criterio más estricto, pensado para scatter/choropleth) y por eso categorías como
+"Familia materna"/"Familia paterna" cabían casi siempre en "Otros" (corregido
+2026-09-24).
 
 ## Responsive
 
-Breakpoint 860px: nav de pestañas → menú hamburguesa (☰, `#menuToggle`). Breakpoint
+Breakpoint 860px: nav de pestañas → menú hamburguesa (☰, `#menuToggle`, 2026-09-24
+rediseñado como drawer de ancho completo + negro sólido): en vez de empujar el
+contenido hacia abajo, `nav.tabs` se posiciona `absolute` (ancla
+`.app{position:relative}`) con `top:0; left:0; right:0` — tapa toda la pantalla de
+lado a lado y desde arriba cuando está abierto, con `background:#000` fijo (no usa las
+variables de tema, es negro sólido siempre, claro u oscuro), `box-shadow` marcado y una
+animación `transform: translateX(...)` de 0.5s. Al ser `position:absolute` con
+`z-index`, el drawer tapa el header (`position:static`) que queda debajo simplemente
+por las reglas normales de stacking — no hace falta elevar ni recolorear el header por
+separado.
+
+El título ("Control de Gastos" + el tipo de cambio) y el botón de cerrar **viven de
+verdad dentro de `nav.tabs`**, como primer hijo (`.nav-drawer-head`, oculto salvo con
+`nav.tabs.open`) — **no** es el header original reposicionado con trucos de z-index (esa
+primera versión dejaba una costura/salto visible entre el título y "Resumen", y el
+tipo de cambio se ocultaba de golpe en vez de tener su propio lugar). El botón
+`#menuToggle` (☰, en el header, siempre visible) abre el menú; el botón `#menuCloseBtn`
+(✕, dentro de `.nav-drawer-head`) lo cierra — son dos botones distintos a propósito,
+porque el que abre tiene que seguir accesible con el drawer cerrado (fuera de
+`nav.tabs`, que en ese estado está fuera de pantalla) y el que cierra tiene que
+verse "dentro" del panel negro. El tipo de cambio aparece **duplicado** (un
+`<span class="fx-ticker">` en el header de siempre y otro dentro de
+`.nav-drawer-head`, ninguno con display condicionado) — `M.renderFxTicker()` en
+`app.js` ya no apunta a un solo id, itera `document.querySelectorAll(".fx-ticker")`
+para mantener ambos sincronizados. Al no ocultar/mostrar nada dinámicamente, abrir el
+menú no reacomoda ni "brinca" el header original — el drawer simplemente lo tapa
+encima, quieto. Los botones de Configuración y Cerrar sesión del header
+(`#settingsBtn`/`#logoutBtn`) se ocultan en
+mobile (`display:none !important` dentro del media query) y se duplican dentro del
+propio `nav.tabs` como `#menuSettingsBtn`/`#menuLogoutBtn` (sección `.nav-menu-extra`,
+oculta en desktop) — así solo se ven cuando el menú está desplegado. Como estos botones
+nuevos viven dentro de `nav.tabs` pero no son pestañas, los selectores de `app.js` que
+antes eran `"nav.tabs button"` se acotaron a `"nav.tabs button[data-tab]"` (si no, el
+listener de cambio de pestaña los agarraba también y rompía el panel activo). Breakpoint
 640px: las tablas (`class="stack-mobile"` + `data-label` en cada `<td>`) se apilan en
 tarjetas "Etiqueta: valor" en vez de scroll horizontal. Afinado extra a 420px para
 soportar hasta 360px de ancho. Selects de Moneda (solo 2 opciones) son un toggle
@@ -159,11 +263,13 @@ open http://localhost:8765/index.html
   Authentication → Settings → Authorized domains.
 
 
+
+
 <!-- cloude-code-toolbox:mcp-skills-awareness-begin -->
 
 ### MCP & Skills awareness (Cloude Code ToolBox)
 
-_Last synced: 2026-09-22T18:04:53.750Z._
+_Last synced: 2026-09-24T21:20:06.089Z._
 
 - **Full report:** `.claude/cloude-code-toolbox-mcp-skills-awareness.md` in this workspace (auto-overwritten on each scan). Use it as ground truth for configured servers and skill folders.
 - **MCP:** For **live tools** in Claude Code, enable the matching server via `/mcp`. Servers are configured in `~/.claude.json` (user) and `.mcp.json` (project).

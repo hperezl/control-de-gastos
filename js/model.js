@@ -119,6 +119,9 @@ CDG.Model = (function () {
   function toColones(monto, moneda) {
     return moneda === "USD" ? monto * state.config.tipoCambio : monto;
   }
+  function toDolares(monto, moneda) {
+    return moneda === "CRC" ? monto / state.config.tipoCambio : monto;
+  }
   function personasDisponibles() {
     const u = state.config.usuarios.slice();
     if (u.length > 1) u.push("Compartido");
@@ -361,7 +364,7 @@ CDG.Model = (function () {
     get state() { return state; },
     CATEGORIAS_GASTO,
     save, resetAll, replaceState, applyRemoteState,
-    toColones, personasDisponibles,
+    toColones, toDolares, personasDisponibles,
     periodForDate, periodFromKey, shiftPeriod, periodKeyForToday, periodLabel, inPeriod,
     weekKey, weekLabel,
     ingresoFijoActivoEnPeriodo, ingresosFijosActivos, ingresosFijosVigentesHoy,

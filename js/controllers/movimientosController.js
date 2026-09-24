@@ -37,6 +37,7 @@ CDG.Controllers = CDG.Controllers || {};
         <div class="field"><label>Monto</label><input type="number" step="0.01" id="mMonto" value="${it.monto}"></div>
         <div class="field"><label>Moneda</label>${U.monedaSegHtml("mMonedaSeg", it.moneda)}</div>
       </div>
+      <p class="hint small">"Compartido" reparte el monto entre las personas registradas (redondeado hacia arriba, sin decimales) en vez de guardarlo como un solo gasto sin dueño.</p>
       <div class="modal-actions">
         <button id="mCancel">Cancelar</button>
         <button class="primary" id="mSave">Guardar</button>
@@ -48,21 +49,39 @@ CDG.Controllers = CDG.Controllers || {};
         const monto = parseFloat(root.querySelector("#mMonto").value);
         const fecha = root.querySelector("#mFecha").value;
         if (!fecha || isNaN(monto)) { U.toast("Completa fecha y monto"); return; }
-        const rec = {
-          id: it.id || U.uid(),
-          fecha,
-          persona: root.querySelector("#mPersona").value,
-          categoria: root.querySelector("#mCategoria").value,
-          descripcion: root.querySelector("#mDesc").value.trim(),
-          monto,
-          moneda: getMoneda()
-        };
+        const persona = root.querySelector("#mPersona").value;
+        const categoria = root.querySelector("#mCategoria").value;
+        const descripcion = root.querySelector("#mDesc").value.trim();
+        const moneda = getMoneda();
         const st = M.state;
         if (isEdit) {
-          const idx = st.movimientos.findIndex(x => x.id === it.id);
-          st.movimientos[idx] = rec;
+          st.movimientos = st.movimientos.filter(x => x.id !== it.id);
+        }
+        if (persona === "Compartido") {
+          const personasReales = M.state.config.usuarios;
+          const montoPersona = Math.ceil(monto / personasReales.length);
+          personasReales.forEach(p => {
+            st.movimientos.push({
+              id: U.uid(),
+              fecha,
+              persona: p,
+              categoria,
+              descripcion,
+              monto: montoPersona,
+              moneda,
+              compartido: true
+            });
+          });
         } else {
-          st.movimientos.push(rec);
+          st.movimientos.push({
+            id: it.id || U.uid(),
+            fecha,
+            persona,
+            categoria,
+            descripcion,
+            monto,
+            moneda
+          });
         }
         M.save(); U.closeModal(); U.toast("Gasto guardado"); CDG.App.refreshAll();
       };
@@ -85,7 +104,13 @@ CDG.Controllers = CDG.Controllers || {};
     }
 
     let list = M.state.movimientos.filter(m => M.inPeriod(m.fecha, period));
-    if (personaF.value !== "todos") list = list.filter(m => m.persona === personaF.value);
+    if (personaF.value === "Compartido") {
+      // "Compartido" ya no se guarda como persona (se reparte al instante entre las
+      // personas reales) — el filtro busca la marca `compartido` en cada mitad.
+      list = list.filter(m => m.compartido);
+    } else if (personaF.value !== "todos") {
+      list = list.filter(m => m.persona === personaF.value);
+    }
     if (categoriaF.value !== "todos") list = list.filter(m => m.categoria === categoriaF.value);
     list.sort((a, b) => a.fecha.localeCompare(b.fecha));
 
@@ -113,7 +138,7 @@ CDG.Controllers = CDG.Controllers || {};
         rows += `<tr data-id="${m.id}">
           <td data-label="Fecha">${U.fechaLegible(m.fecha)}</td>
           <td data-label="Categoría"><span class="tag gasto">${U.escapeHtml(m.categoria)}</span></td>
-          <td data-label="Persona">${U.escapeHtml(m.persona)}</td>
+          <td data-label="Persona">${U.escapeHtml(m.persona)}${m.compartido ? ` <span class="tag compartido" title="Parte de un gasto compartido">Compartido</span>` : ""}</td>
           <td data-label="Descripción">${U.escapeHtml(m.descripcion) || "—"}</td>
           <td class="num" data-label="Monto">${U.fmtMoneda(m.monto, m.moneda)}</td>
           <td class="row-actions">

@@ -25,27 +25,26 @@ CDG.App = (function () {
   }
 
   function renderFxTicker() {
-    const el = document.getElementById("fxTicker");
-    if (!el) return;
     const cfg = M.state.config;
-    if (!cfg.tipoCambio) { el.textContent = ""; return; }
-    el.textContent = `₡${cfg.tipoCambio.toLocaleString("es-CR")} / $1`;
-    el.title = cfg.tipoCambioFecha
-      ? `Tipo de cambio de compra BCCR (${cfg.tipoCambioFecha}), vía AllRatesToday`
-      : "Tipo de cambio";
+    document.querySelectorAll(".fx-ticker").forEach(el => {
+      if (!cfg.tipoCambio) { el.textContent = ""; return; }
+      el.textContent = `₡${cfg.tipoCambio.toLocaleString("es-CR")} / $1`;
+      el.title = cfg.tipoCambioFecha
+        ? `Tipo de cambio de compra BCCR (${cfg.tipoCambioFecha}), vía AllRatesToday`
+        : "Tipo de cambio";
+    });
   }
 
   function switchTab(name) {
-    document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+    document.querySelectorAll("nav.tabs button[data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
     document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + name));
     closeMobileMenu();
   }
 
   function closeMobileMenu() {
     const nav = document.querySelector("nav.tabs");
-    const btn = document.getElementById("menuToggle");
     nav.classList.remove("open");
-    btn.setAttribute("aria-expanded", "false");
+    document.getElementById("menuToggle").setAttribute("aria-expanded", "false");
   }
   function wireMobileMenu() {
     const nav = document.querySelector("nav.tabs");
@@ -54,8 +53,17 @@ CDG.App = (function () {
       const open = nav.classList.toggle("open");
       btn.setAttribute("aria-expanded", open ? "true" : "false");
     });
+    document.getElementById("menuCloseBtn").addEventListener("click", closeMobileMenu);
     document.addEventListener("click", (e) => {
       if (nav.classList.contains("open") && !nav.contains(e.target) && e.target !== btn) closeMobileMenu();
+    });
+    document.getElementById("menuSettingsBtn").addEventListener("click", () => {
+      closeMobileMenu();
+      CDG.Controllers.Settings.open();
+    });
+    document.getElementById("menuLogoutBtn").addEventListener("click", () => {
+      closeMobileMenu();
+      CDG.Cloud.signOut();
     });
   }
 
@@ -79,13 +87,14 @@ CDG.App = (function () {
       periodKey = M.shiftPeriod(periodKey, 1);
       refreshAll();
     });
-    document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+    document.querySelectorAll("nav.tabs button[data-tab]").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
     wireMobileMenu();
     CDG.Controllers.Settings.init(cloudEnabled);
     if (cloudEnabled) {
       const logoutBtn = document.getElementById("logoutBtn");
       logoutBtn.style.display = "";
       logoutBtn.addEventListener("click", () => CDG.Cloud.signOut());
+      document.getElementById("menuLogoutBtn").style.display = "";
     }
   }
 

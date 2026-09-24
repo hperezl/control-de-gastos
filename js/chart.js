@@ -88,13 +88,13 @@ CDG.Chart = (function () {
     });
   }
 
-  /* Donut chart: gasto por categoría del periodo. Caps at the top 3 categories
-     (individually colored) and folds the rest into "Otros" (muted gray) — a
-     pie/donut puts every slice adjacent to every other one, and per the
-     palette's own validation only its first 3 categorical hues clear the
-     colorblind-safety floor under that "all pairs" condition. The legend
-     always carries the name + amount as text, so identity never rests on
-     hue alone even for the folded slices. */
+  /* Donut chart: gasto por categoría del periodo. Sorted by value, a donut's
+     wedges are only ever adjacent to their immediate neighbor (plus the
+     wrap-around pair), so this uses the adjacent-pairs categorical theme (8
+     fixed hues, validated order) rather than the stricter all-pairs cap.
+     Caps at the top 8 categories (individually colored) and folds any rest
+     into "Otros" (muted gray). The legend always carries the name + amount
+     as text, so identity never rests on hue alone even for the folded slice. */
   function renderCategoryDonut(svg, legendEl, movimientosDelPeriodo) {
     const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     const tooltip = document.getElementById("barTooltip");
@@ -116,14 +116,14 @@ CDG.Chart = (function () {
       return;
     }
 
-    const CAT_COLORS = [cssVar("--series-cat-1"), cssVar("--series-cat-2"), cssVar("--series-cat-3")];
+    const CAT_COLORS = [1, 2, 3, 4, 5, 6, 7, 8].map(i => cssVar(`--series-cat-${i}`));
     const OTROS_COLOR = cssVar("--text-muted");
     let slices;
-    if (entries.length <= 3) {
+    if (entries.length <= CAT_COLORS.length) {
       slices = entries.map(([cat, val], i) => ({ label: cat, value: val, color: CAT_COLORS[i] }));
     } else {
-      const top = entries.slice(0, 3).map(([cat, val], i) => ({ label: cat, value: val, color: CAT_COLORS[i] }));
-      const restTotal = entries.slice(3).reduce((s, [, v]) => s + v, 0);
+      const top = entries.slice(0, CAT_COLORS.length).map(([cat, val], i) => ({ label: cat, value: val, color: CAT_COLORS[i] }));
+      const restTotal = entries.slice(CAT_COLORS.length).reduce((s, [, v]) => s + v, 0);
       slices = top.concat([{ label: "Otros", value: restTotal, color: OTROS_COLOR }]);
     }
 

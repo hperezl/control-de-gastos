@@ -134,6 +134,28 @@ recarga en el navegador del usuario (no confiar en que refresque solo).
   columna "Gastos" incluye gastos fijos + variables (corregido 2026-09-22; antes solo
   sumaba variables, lo que hacía que "Balance" no coincidiera con "Ahorro" del mismo
   periodo — ahora sí coinciden, son la misma cifra vista desde dos ángulos).
+- **Fecha/hora: siempre local, nunca UTC crudo** (bug corregido 2026-10-05). `U.isoDate(d)`
+  en `utils.js` es el único helper correcto para convertir un `Date` a `"YYYY-MM-DD"`
+  (compensa el offset de zona horaria antes de usar `toISOString()`) — usarlo SIEMPRE en
+  vez de `d.toISOString().slice(0,10)` a secas. El bug real: el default de "Fecha" al
+  abrir "+ Nuevo gasto" (`movimientosController.js`) y el nombre del archivo de
+  "Exportar JSON" (`backupController.js`) usaban `toISOString()` crudo — en Costa Rica
+  (UTC-6), eso hace que pasadas las 6pm hora local el campo de fecha ya muestre el día
+  siguiente (la hora UTC ya cruzó medianoche aunque localmente siga siendo "hoy"). El
+  cálculo de periodos/ciclo de corte (`M.periodForDate`, `M.periodKeyForToday` en
+  `model.js`) YA usaba `U.isoDate()` correctamente desde antes — por eso el cambio de
+  ciclo a medianoche del día de corte (o del día 1 si no hay corte activo) ya funcionaba
+  bien y no necesitó tocarse; solo el picker de fecha del formulario estaba mal. Ojo con
+  este patrón si se agrega una fecha nueva en cualquier lado: `new Date()` +
+  `.toISOString()` sin pasar por `U.isoDate()` reintroduce el mismo bug.
+- **Filtros de Movimientos**: además de Persona/Categoría, hay un filtro de fecha exacta
+  (`#movFechaFilter`, `<input type="date">`, compara `m.fecha === valor`) y uno de monto
+  (`#movMontoFilter` + un toggle ₡/$ `#movMontoMonedaSeg` generado con
+  `U.monedaSegHtml`/`U.wireMonedaSeg` — el mismo componente que usa el modal de gasto,
+  reusado aquí fuera de un modal pasando `document` como "root") que filtra por
+  coincidencia exacta de monto **y** moneda (`m.moneda === seleccionada && monto
+  ≈ m.monto`, con tolerancia de 0.005 por redondeo). Todo vive en `render()`/`init()` de
+  `movimientosController.js`.
 - **Regla no escrita pero seguida hasta ahora: los cambios de esquema son aditivos, nunca
   destructivos.** Ningún cambio de código borra o sobrescribe datos existentes del
   usuario — campos nuevos (ej. `dia` en fijos) se agregan junto a los viejos (`periodo`),
@@ -307,11 +329,12 @@ open http://localhost:8765/index.html
 
 
 
+
 <!-- cloude-code-toolbox:mcp-skills-awareness-begin -->
 
 ### MCP & Skills awareness (Cloude Code ToolBox)
 
-_Last synced: 2026-09-24T22:04:09.318Z._
+_Last synced: 2026-10-06T05:11:22.691Z._
 
 - **Full report:** `.claude/cloude-code-toolbox-mcp-skills-awareness.md` in this workspace (auto-overwritten on each scan). Use it as ground truth for configured servers and skill folders.
 - **MCP:** For **live tools** in Claude Code, enable the matching server via `/mcp`. Servers are configured in `~/.claude.json` (user) and `.mcp.json` (project).

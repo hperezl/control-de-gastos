@@ -5,6 +5,7 @@ CDG.Controllers = CDG.Controllers || {};
 (function () {
   const U = CDG.Utils;
   const M = CDG.Model;
+  let getMontoFilterMoneda = null;
 
   function personaOptions(selected) {
     return M.personasDisponibles().map(p => `<option ${p === selected ? "selected" : ""}>${U.escapeHtml(p)}</option>`).join("");
@@ -18,7 +19,7 @@ CDG.Controllers = CDG.Controllers || {};
     const usuarios = M.personasDisponibles();
     const it = existing || {
       id: null,
-      fecha: new Date().toISOString().slice(0, 10),
+      fecha: U.isoDate(new Date()),
       persona: usuarios[0] || "",
       categoria: M.CATEGORIAS_GASTO[0],
       descripcion: "",
@@ -103,6 +104,9 @@ CDG.Controllers = CDG.Controllers || {};
         M.CATEGORIAS_GASTO.map(c => `<option value="${U.escapeHtml(c)}">${U.escapeHtml(c)}</option>`).join("");
     }
 
+    const fechaF = document.getElementById("movFechaFilter");
+    const montoF = document.getElementById("movMontoFilter");
+
     let list = M.state.movimientos.filter(m => M.inPeriod(m.fecha, period));
     if (personaF.value === "Compartido") {
       // "Compartido" ya no se guarda como persona (se reparte al instante entre las
@@ -112,6 +116,12 @@ CDG.Controllers = CDG.Controllers || {};
       list = list.filter(m => m.persona === personaF.value);
     }
     if (categoriaF.value !== "todos") list = list.filter(m => m.categoria === categoriaF.value);
+    if (fechaF.value) list = list.filter(m => m.fecha === fechaF.value);
+    if (montoF.value !== "" && getMontoFilterMoneda) {
+      const monto = parseFloat(montoF.value);
+      const moneda = getMontoFilterMoneda();
+      if (!isNaN(monto)) list = list.filter(m => m.moneda === moneda && Math.abs(m.monto - monto) < 0.005);
+    }
     list.sort((a, b) => a.fecha.localeCompare(b.fecha));
 
     const wrap = document.getElementById("movimientosTableWrap");
@@ -176,6 +186,13 @@ CDG.Controllers = CDG.Controllers || {};
   function init() {
     document.getElementById("movPersonaFilter").addEventListener("change", render);
     document.getElementById("movCategoriaFilter").addEventListener("change", render);
+    document.getElementById("movFechaFilter").addEventListener("change", render);
+    document.getElementById("movMontoFilter").addEventListener("input", render);
+    document.getElementById("movMontoMonedaSeg").outerHTML = U.monedaSegHtml("movMontoMonedaSeg", "CRC");
+    getMontoFilterMoneda = U.wireMonedaSeg(document, "movMontoMonedaSeg");
+    document.querySelectorAll("#movMontoMonedaSeg [data-moneda]").forEach(btn => {
+      btn.addEventListener("click", render);
+    });
     document.getElementById("addMovBtn").addEventListener("click", () => openMovModal(null));
   }
 

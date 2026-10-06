@@ -376,6 +376,11 @@ tr:hover td { background: color-mix(in srgb, var(--text-primary) 4%, transparent
 .seg-btn.active { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .seg-group.compact { display: flex; width: 100%; }
 .seg-group.compact .seg-btn { flex: 1; text-align: center; padding: 7px 6px; white-space: nowrap; }
+/* In a filter bar (head-actions) the toggle sits beside other controls, not
+   alone inside a full-width .field — let it size to its own content instead
+   of stretching to fill the row. */
+.head-actions .seg-group.compact { width: auto; }
+.mov-monto-filter { width: 110px; }
 
 /* registro / config form */
 .registro-screen {

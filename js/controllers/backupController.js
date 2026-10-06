@@ -12,7 +12,7 @@ CDG.Controllers.Backup = (function () {
     const blob = new Blob([JSON.stringify(M.state, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `control-de-gastos-${new Date().toISOString().slice(0, 10)}.json`;
+    a.href = url; a.download = `control-de-gastos-${U.isoDate(new Date())}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
     U.toast("Respaldo exportado");
